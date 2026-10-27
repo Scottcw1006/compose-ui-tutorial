@@ -148,7 +148,7 @@ fun AnimatedContentDemo() {
 @Composable
 fun TransitionDemo() {
     var selected by remember { mutableStateOf(false) }
-    // 一個狀態驅動多個屬性，所有動畫同步開始、同步結束
+    // 一個狀態驅動多個屬性：所有動畫同時開始，由同一個 transition 統一管理
     val transition = updateTransition(targetState = selected, label = "card")
     val corner by transition.animateDp(label = "corner") { if (it) 48.dp else 12.dp }
     val padding by transition.animateDp(label = "padding") { if (it) 32.dp else 16.dp }
@@ -182,8 +182,8 @@ fun AnimateContentSizeDemo() {
     Box(Modifier.fillMaxSize().padding(16.dp)) {
         Card(
             Modifier
+                .animateContentSize() // 尺寸改變時自動補間；放在尺寸 Modifier 之前
                 .fillMaxWidth()
-                .animateContentSize() // 尺寸改變時自動補間
                 .clickable { expanded = !expanded },
         ) {
             Column(Modifier.padding(16.dp)) {

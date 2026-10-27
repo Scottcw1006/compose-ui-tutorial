@@ -19,13 +19,13 @@
     <main class="content">
       <p class="chapter-label">第 8 章 · 動畫與特效</p>
       <h1>graphicsLayer 視覺特效</h1>
-      <p class="lead"><code>Modifier.graphicsLayer</code> 把元件繪製到一個獨立的圖層上，再對整個圖層做縮放、旋轉、透明度、裁切與合成。它相當於 View 的 <code>setScaleX</code>、<code>setRotationY</code>、<code>setAlpha</code> 加上 <code>setLayerType(LAYER_TYPE_HARDWARE)</code>，是做出流暢特效的核心工具。</p>
+      <p class="lead"><code>Modifier.graphicsLayer</code> 把元件繪製到一個獨立的圖層上，再對整個圖層做縮放、旋轉、透明度、裁切與合成。它相當於 View 的 <code>setScaleX</code>、<code>setRotationY</code>、<code>setAlpha</code> 這些 RenderNode 屬性，是做出流暢特效的核心工具。預設情況下它不一定會另外配置離屏緩衝區；需要像 <code>setLayerType(LAYER_TYPE_HARDWARE)</code> 那樣真正畫到獨立緩衝區時，要指定 <code>CompositingStrategy.Offscreen</code>（本章「聚光燈遮罩」會用到）。</p>
 
       <section class="lesson" id="layer">
         <h2>變形與透明度</h2>
         <span class="part-label">說明</span>
         <p><code>graphicsLayer { }</code> 的屬性只影響<strong>繪製</strong>，不影響排版：元件放大兩倍，佔用的空間還是原本的大小，也不會推擠旁邊的元件 —— 和 View 的 <code>scaleX</code> 行為一致。</p>
-        <p>因為使用 lambda 版本，滑桿拖動時只會更新圖層屬性並重新繪製，不會重組也不會重新排版，這也是它適合做動畫的原因。</p>
+        <p>改變圖層屬性<strong>不需要重新排版</strong>，只要重新繪製，這是它適合做動畫的原因。此外，如果數值只在 <code>graphicsLayer { }</code> 的 lambda 裡被讀取（例如動畫值），連重組都可以跳過。這個範例的滑桿本身要顯示目前數值，所以拖動時仍會重組，但方塊不會重新排版。</p>
         <div class="example" data-id="fx-layer" data-height="360" data-hint="試試看：拖動三個滑桿"></div>
         <aside class="warn">
           <p>不要在 lambda 裡使用和 <code>GraphicsLayerScope</code> 屬性同名的變數，例如區域變數 <code>alpha</code>。<code>alpha = alpha</code> 會被解析成區域變數指派給自己，圖層的透明度根本不會改變。範例中刻意命名為 <code>opacity</code>。</p>

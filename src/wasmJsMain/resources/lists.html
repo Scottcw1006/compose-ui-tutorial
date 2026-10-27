@@ -48,18 +48,18 @@
         <span class="part-label">說明</span>
         <p>網格版本，取代 <code>GridLayoutManager</code>。<code>GridCells</code> 決定欄位怎麼切：</p>
         <ul>
-          <li><code>GridCells.Fixed(3)</code>：固定 3 欄。</li>
-          <li><code>GridCells.Adaptive(72.dp)</code>：每欄至少 72dp，依可用寬度自動決定欄數，在平板與手機上都好看。</li>
+          <li><code>GridCells.Fixed(3)</code>：不論螢幕多寬，固定 3 欄，每欄平分寬度。</li>
+          <li><code>GridCells.Adaptive(56.dp)</code>：每欄至少 56dp，依可用寬度自動決定欄數。在這個約 320dp 寬的預覽中會排出 4 欄，換到平板上欄數會自動增加。</li>
         </ul>
-        <div class="example" data-id="lists-grid" data-height="360"></div>
+        <div class="example" data-id="lists-grid" data-height="380" data-hint="試試看：切換上方的 Fixed(3) 與 Adaptive(56.dp)，比較欄數變化"></div>
       </section>
 
       <section class="lesson" id="scroll-state">
         <h2>捲動狀態與 derivedStateOf</h2>
         <span class="part-label">說明</span>
         <p><code>rememberLazyListState()</code> 可以讀取目前捲動位置，也能用程式控制捲動（<code>animateScrollToItem</code> 是 suspend 函式，要用 <code>rememberCoroutineScope</code> 啟動）。</p>
-        <p>捲動位置每一幀都在變，如果直接在 Composable 裡讀 <code>firstVisibleItemIndex</code> 來判斷要不要顯示按鈕，會造成大量不必要的重組。用 <code>derivedStateOf</code> 包起來，只有在「布林值本身」改變時才會觸發重組。</p>
-        <div class="example" data-id="lists-scroll-state" data-height="360" data-hint="試試看：往下捲超過第 5 列，右下角會出現按鈕"></div>
+        <p>捲動時 <code>firstVisibleItemIndex</code> 會頻繁變動，如果直接在 Composable 裡讀它來判斷要不要顯示按鈕，每次 index 改變都會重組；而按鈕其實只關心「是否捲過一定位置」這個布林值。用 <code>derivedStateOf</code> 包起來，只有在布林值本身改變時才會觸發重組。（如果讀的是每個像素都在變的 <code>firstVisibleItemScrollOffset</code>，差距會更明顯。）</p>
+        <div class="example" data-id="lists-scroll-state" data-height="360" data-hint="試試看：往下捲到 Row 6 移到最上方，右下角會出現按鈕"></div>
       </section>
 
       <nav class="pager"></nav>

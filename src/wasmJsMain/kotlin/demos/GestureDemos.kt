@@ -125,7 +125,7 @@ fun SwipeToDismissDemo() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         messages.forEach { message ->
-            // key 讓每一列的 Animatable 跟著資料走，刪除後不會錯位
+            // key 讓每一列的 offsetX 狀態跟著資料走，刪除後不會錯位
             key(message) {
                 SwipeableRow(message, onDismiss = { messages = messages - message })
             }

@@ -37,7 +37,7 @@
       <section class="lesson" id="path">
         <h2>Path：任意形狀</h2>
         <span class="part-label">說明</span>
-        <p>基本圖形不夠用時，用 <code>Path</code> 描述輪廓：<code>moveTo</code> 移動筆尖、<code>lineTo</code> 畫直線、<code>quadraticTo</code> / <code>cubicTo</code> 畫曲線、<code>close</code> 封閉路徑。</p>
+        <p>基本圖形不夠用時，用 <code>Path</code> 描述輪廓：<code>moveTo</code> 移動筆尖、<code>lineTo</code> 畫直線、<code>close</code> 封閉路徑。本例的星星只用到這三個；需要曲線時另有 <code>quadraticTo</code> / <code>cubicTo</code>（貝茲曲線）。</p>
         <p>同一條 Path 可以畫兩次：一次用漸層 <code>Brush</code> 填滿，一次用 <code>Stroke</code> 描邊。</p>
         <div class="example" data-id="canvas-path" data-height="260"></div>
       </section>
@@ -67,7 +67,7 @@
           <li><code>Modifier.drawWithContent { }</code>：由你呼叫 <code>drawContent()</code>，可以決定裝飾要畫在內容前面還是後面，例如未讀紅點、浮水印。</li>
           <li><code>Modifier.drawWithCache { }</code>：需要建立 <code>Path</code>、<code>Brush</code> 這類物件時使用，只在尺寸或讀取的狀態改變時重建，避免每一幀都配置新物件。</li>
         </ul>
-        <div class="example" data-id="canvas-draw-modifier" data-height="260"></div>
+        <div class="example" data-id="canvas-draw-modifier" data-height="340"></div>
         <aside class="tip">
           <p>其實 <code>Canvas(modifier) { }</code> 的實作就是 <code>Spacer(modifier.drawBehind { })</code>。所以 Canvas 本身沒有大小，一定要透過 Modifier 指定尺寸，否則什麼都看不到。</p>
         </aside>

@@ -29,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -239,6 +240,27 @@ fun DrawModifierDemo() {
                 },
             contentAlignment = Alignment.Center,
         ) { Text("Inbox") }
+        // drawWithCache：Brush 依尺寸建立，只在尺寸改變時重建，重畫時直接沿用
+        Box(
+            Modifier
+                .size(width = 200.dp, height = 56.dp)
+                .drawWithCache {
+                    val brush = Brush.horizontalGradient(
+                        colors = listOf(Color(0xFF6750A4), Color(0xFFB4589C)),
+                        startX = 0f,
+                        endX = size.width,
+                    )
+                    val corner = CornerRadius(12.dp.toPx())
+                    onDrawBehind {
+                        drawRoundRect(
+                            brush = brush,
+                            cornerRadius = corner,
+                            style = Stroke(width = 3.dp.toPx()),
+                        )
+                    }
+                },
+            contentAlignment = Alignment.Center,
+        ) { Text("Gradient border") }
     }
 }
 // [/snippet]

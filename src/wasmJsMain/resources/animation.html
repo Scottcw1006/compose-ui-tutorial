@@ -60,7 +60,7 @@
       <section class="lesson" id="transition">
         <h2>updateTransition：一個狀態驅動多個動畫</h2>
         <span class="part-label">說明</span>
-        <p>當多個屬性要跟著同一個狀態一起變化時，與其寫好幾個獨立的 <code>animate*AsState</code>，不如用 <code>updateTransition</code>。它保證所有子動畫同步開始與結束，也能在 Android Studio 的 Animation Preview 中逐幀檢查。</p>
+        <p>當多個屬性要跟著同一個狀態一起變化時，與其寫好幾個獨立的 <code>animate*AsState</code>，不如用 <code>updateTransition</code>。所有子動畫會同時開始、由同一個狀態統一管理（各自何時結束取決於各自的 <code>animationSpec</code>），也能在 Android Studio 的 Animation Preview 中逐幀檢查。</p>
         <div class="example" data-id="anim-transition" data-height="260" data-hint="試試看：點擊卡片切換選取狀態"></div>
       </section>
 

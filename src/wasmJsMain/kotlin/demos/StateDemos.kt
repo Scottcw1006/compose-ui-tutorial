@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 // [snippet:state-counter]
 @Composable
 fun CounterDemo() {
-    // remember：重組時保留值；mutableStateOf：值改變時觸發重組
+    // remember：重組時保留值；mutableIntStateOf（Int 版的 mutableStateOf）：值改變時觸發重組
     var count by remember { mutableIntStateOf(0) }
 
     Column(

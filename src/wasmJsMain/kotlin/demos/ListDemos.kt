@@ -28,14 +28,17 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -113,23 +116,46 @@ fun LazyRowDemo() {
 // [snippet:lists-grid]
 @Composable
 fun LazyGridDemo() {
-    LazyVerticalGrid(
-        columns = GridCells.Adaptive(minSize = 72.dp),
-        contentPadding = PaddingValues(12.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        items((1..60).toList()) { n ->
-            Box(
-                Modifier
-                    .aspectRatio(1f)
-                    .background(
-                        Color.hsv(hue = (n * 6f) % 360f, saturation = 0.45f, value = 0.95f),
-                        RoundedCornerShape(12.dp),
-                    ),
-                contentAlignment = Alignment.Center,
-            ) { Text("$n", fontSize = 16.sp) }
+    var adaptive by remember { mutableStateOf(false) }
+
+    Column(Modifier.fillMaxSize()) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = !adaptive,
+                onClick = { adaptive = false },
+                label = { Text("Fixed(3)") },
+            )
+            FilterChip(
+                selected = adaptive,
+                onClick = { adaptive = true },
+                label = { Text("Adaptive(56.dp)") },
+            )
+        }
+        LazyVerticalGrid(
+            columns = if (adaptive) {
+                GridCells.Adaptive(minSize = 56.dp) // 每欄至少 56dp，欄數依寬度決定
+            } else {
+                GridCells.Fixed(3) // 不論寬度，固定 3 欄
+            },
+            contentPadding = PaddingValues(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.weight(1f),
+        ) {
+            items((1..60).toList()) { n ->
+                Box(
+                    Modifier
+                        .aspectRatio(1f)
+                        .background(
+                            Color.hsv(hue = (n * 6f) % 360f, saturation = 0.45f, value = 0.95f),
+                            RoundedCornerShape(12.dp),
+                        ),
+                    contentAlignment = Alignment.Center,
+                ) { Text("$n", fontSize = 16.sp) }
+            }
         }
     }
 }
@@ -140,7 +166,8 @@ fun LazyGridDemo() {
 fun ScrollToTopDemo() {
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
-    // derivedStateOf：只有在「是否超過第 5 列」改變時才觸發重組，而不是每捲一個像素
+    // derivedStateOf：只有在「是否捲過 Row 5」這個布林值改變時才觸發重組，
+    // 而不是每次 firstVisibleItemIndex 變動都重組
     val showButton by remember {
         derivedStateOf { listState.firstVisibleItemIndex > 5 }
     }

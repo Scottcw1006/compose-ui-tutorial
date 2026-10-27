@@ -281,7 +281,15 @@ fun BlurDemo() {
                 fontWeight = FontWeight.Bold,
             )
         }
-        LabeledSlider("blur ${radius.roundToInt()}dp", radius, 0f..20f) { radius = it }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("blur ${radius.roundToInt()}dp", fontSize = 13.sp, modifier = Modifier.width(76.dp))
+            Slider(
+                value = radius,
+                onValueChange = { radius = it },
+                valueRange = 0f..20f,
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 // [/snippet]
