@@ -2,6 +2,8 @@
 
 給 Android 開發者的 Jetpack Compose 教學網站。每一節都包含 **說明、代碼、實際呈現**，其中「實際呈現」是同一段 Compose 代碼透過 Compose Multiplatform 編譯成 WebAssembly、直接在瀏覽器中執行。
 
+線上版：<https://scottcw1006.github.io/compose-ui-tutorial/>（每次 push 到 `main` 會由 GitHub Actions 自動建置並部署，見 `.github/workflows/deploy-pages.yml`）
+
 ## 本機執行
 
 需要 JDK 17 以上（可直接用 Android Studio 內建的 JBR）。
