@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <div class="hero">
+        <p class="chapter-label">給 Android 開發者的 Jetpack Compose 教學</p>
+        <h1>從 XML 到 Compose，<br>邊看邊玩邊學</h1>
+        <p class="lead">你已經會寫 Android，熟悉 Activity、RecyclerView 與 XML layout。這份教學不從零講 Kotlin，而是直接對照你熟悉的 View 系統，帶你從排版一路走到動畫與特效。</p>
+      </div>
+
+      <h2>每一節都有三個部分</h2>
+      <ul>
+        <li><strong>說明</strong>：觀念是什麼、和 View 系統的差別、常見的坑。</li>
+        <li><strong>代碼</strong>：可以直接複製到專案使用的 Composable。</li>
+        <li><strong>實際呈現</strong>：右側的手機框不是截圖，而是<strong>同一段 Compose 代碼</strong>透過 Compose Multiplatform 編譯成 WebAssembly，真的在你的瀏覽器中執行 —— 可以點、可以滑、可以打字。</li>
+      </ul>
+
+      <h2>學習路線</h2>
+      <div class="roadmap">
+        <a href="layout.html"><span class="num">01 · 基礎排版</span><h3>Column、Row、Box</h3><p>取代 LinearLayout 與 FrameLayout 的三個基本容器。</p></a>
+        <a href="modifier.html"><span class="num">02 · 基礎排版</span><h3>Modifier</h3><p>尺寸、留白、點擊、形狀，以及最重要的「順序」。</p></a>
+        <a href="state.html"><span class="num">03 · 狀態與資料</span><h3>State 與重組</h3><p>remember、mutableStateOf 與狀態提升。</p></a>
+        <a href="lists.html"><span class="num">04 · 狀態與資料</span><h3>Lazy 列表</h3><p>告別 RecyclerView 與 Adapter。</p></a>
+        <a href="animation.html"><span class="num">05 · 動畫與特效</span><h3>動畫基礎</h3><p>animate*AsState、AnimatedVisibility、Transition。</p></a>
+        <a href="gestures.html"><span class="num">06 · 動畫與特效</span><h3>手勢與拖曳</h3><p>pointerInput、draggable、滑動刪除。</p></a>
+        <a href="canvas.html"><span class="num">07 · 動畫與特效</span><h3>Canvas 自訂繪圖</h3><p>DrawScope、Path、進度環與塗鴉板。</p></a>
+        <a href="effects.html"><span class="num">08 · 動畫與特效</span><h3>graphicsLayer 視覺特效</h3><p>3D 翻轉、骨架屏、聚光燈遮罩、模糊。</p></a>
+      </div>
+
+      <aside class="tip">
+        <p><strong>關於線上示範：</strong>示範使用 Compose Multiplatform for Web，與 Android 上的 Jetpack Compose 共用相同的 API。少數依賴 Android 平台的功能（例如 <code>LocalContext</code>、<code>R.drawable</code> 資源）無法在網頁上示範，遇到時會特別標註。</p>
+      </aside>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="js/site.js"></script>
+</body>
+</html>

@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>手勢與拖曳 · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 6 章 · 動畫與特效</p>
+      <h1>手勢與拖曳</h1>
+      <p class="lead">在 View 系統裡，自訂手勢通常要覆寫 <code>onTouchEvent</code>、搭配 <code>GestureDetector</code>、<code>VelocityTracker</code>，自己處理 <code>ACTION_DOWN</code> / <code>MOVE</code> / <code>UP</code>。Compose 把手勢分成三個層級，從簡單到底層依序是：</p>
+
+      <table class="compare">
+        <tr><th>層級</th><th>API</th><th>適用情境</th></tr>
+        <tr><td>高階 Modifier</td><td><code>clickable</code>、<code>draggable</code>、<code>scrollable</code>、<code>transformable</code></td><td>單一方向拖曳、捲動、點擊，附帶無障礙支援</td></tr>
+        <tr><td>手勢偵測器</td><td><code>pointerInput { detectTapGestures / detectDragGestures … }</code></td><td>雙擊、長按、自由拖曳等組合手勢</td></tr>
+        <tr><td>底層事件</td><td><code>pointerInput { awaitPointerEventScope { … } }</code></td><td>完全自訂，相當於 <code>onTouchEvent</code></td></tr>
+      </table>
+
+      <section class="lesson" id="tap">
+        <h2>detectTapGestures：點擊、雙擊、長按</h2>
+        <span class="part-label">說明</span>
+        <p><code>clickable</code> 只處理單擊。需要區分雙擊或長按時，改用 <code>pointerInput</code> 裡的 <code>detectTapGestures</code>，每個回呼都會拿到點擊位置（相對於元件左上角的 px 座標）。</p>
+        <p><code>pointerInput(key)</code> 的 key 和 <code>remember</code> 的 key 意義相同：key 改變時，手勢偵測的協程會被取消並重新啟動。不依賴任何外部值時傳 <code>Unit</code> 即可。</p>
+        <div class="example" data-id="gesture-tap" data-height="260" data-hint="試試看：單擊、快速雙擊、按住不放"></div>
+        <aside class="warn">
+          <p>同時加上 <code>onDoubleTap</code> 時，單擊要等一小段時間確認不是雙擊才會觸發，所以會感覺稍有延遲。只需要單擊時，請用 <code>clickable</code>。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="drag">
+        <h2>detectDragGestures：自由拖曳</h2>
+        <span class="part-label">說明</span>
+        <p><code>detectDragGestures</code> 每次移動都會回傳這一幀的位移量 <code>dragAmount</code>，把它累加到 offset 狀態上就能讓元件跟著手指走。<code>change.consume()</code> 表示「這個事件我處理掉了」，避免父層的捲動容器也同時反應。</p>
+        <p>注意這裡用的是 <code>Modifier.offset { }</code> 的 lambda 版本：它在排版階段才讀取狀態，拖曳時只會重新擺放位置，不需要重組整個元件。</p>
+        <div class="example" data-id="gesture-drag" data-height="300" data-hint="試試看：拖曳方塊，再按 Reset"></div>
+      </section>
+
+      <section class="lesson" id="swipe">
+        <h2>draggable + animate：滑動刪除</h2>
+        <span class="part-label">說明</span>
+        <p>只需要單一方向時，用 <code>Modifier.draggable</code> 比 <code>pointerInput</code> 更簡單。這個範例把手勢與動畫串在一起：</p>
+        <ul>
+          <li>拖曳中：每次位移直接加到 <code>offsetX</code> 狀態上，元件即時跟手。</li>
+          <li>放開時：<code>onDragStopped</code> 是 suspend lambda，會拿到放開瞬間的速度。拖得夠遠、或甩得夠快就飛出去並刪除，否則彈回原位。</li>
+          <li>suspend 函式 <code>animate(...)</code> 會一路執行到動畫結束才返回，所以寫在它後面的 <code>onDismiss()</code> 一定在飛出動畫播完後才執行。</li>
+          <li>把放開時的速度傳給 <code>initialVelocity</code>，動畫會延續手指的慣性，而不是從靜止開始。</li>
+        </ul>
+        <aside class="warn">
+          <p><strong>常見陷阱：</strong>若改用 <code>Animatable</code>，並在拖曳回呼裡 <code>scope.launch { snapTo(...) }</code>，最後一次拖曳排程的 <code>snapTo</code> 可能在放開後才執行，把飛出動畫取消掉，元件就會卡在半路、<code>onDismiss</code> 也不會被呼叫。</p>
+        </aside>
+        <div class="example" data-id="gesture-swipe" data-height="300" data-hint="試試看：把訊息往左或往右滑掉"></div>
+        <aside class="tip">
+          <p>實務上，Material 3 已經提供 <code>SwipeToDismissBox</code>，一般列表直接使用即可。理解這個範例的原理後，你就能做出卡片堆疊、底部抽屜這類 Material 元件沒有涵蓋的互動。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

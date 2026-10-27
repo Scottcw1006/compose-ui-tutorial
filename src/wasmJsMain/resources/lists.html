@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lazy 列表 · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 4 章 · 狀態與資料</p>
+      <h1>Lazy 列表</h1>
+      <p class="lead">告別 <code>RecyclerView</code>、<code>Adapter</code>、<code>ViewHolder</code> 與 <code>DiffUtil</code>。Lazy 系列元件只會組合與排版目前看得到的項目，用幾行程式就能做出可以捲動上千筆資料的列表。</p>
+
+      <section class="lesson" id="lazycolumn">
+        <h2>LazyColumn</h2>
+        <span class="part-label">說明</span>
+        <p><code>LazyColumn</code> 的內容區塊是一個 DSL，不是一般的 Composable 區塊：</p>
+        <ul>
+          <li><code>item { }</code>：放單一項目，例如標題或 header。</li>
+          <li><code>items(list) { }</code>：依資料清單產生項目，可以和 <code>item</code> 自由混用，不用再處理 view type。</li>
+          <li><code>key</code>：提供穩定的唯一 ID，資料新增、刪除、重新排序時，Compose 才能正確保留每列的狀態與動畫 —— 相當於 <code>DiffUtil</code> 的 <code>areItemsTheSame</code>。</li>
+        </ul>
+        <div class="example" data-id="lists-column" data-height="360" data-hint="試試看：在畫面中滾動，1000 筆資料依然流暢"></div>
+        <aside class="warn">
+          <p>不要在 <code>Column</code> 裡用 <code>forEach</code> 產生大量項目再加 <code>verticalScroll</code> —— 那會一次組合所有項目，等同於把 1000 個 View 放進 <code>ScrollView</code>。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="lazyrow">
+        <h2>LazyRow</h2>
+        <span class="part-label">說明</span>
+        <p>水平方向的版本。注意 <code>contentPadding</code> 和 <code>Modifier.padding</code> 的差別：<code>contentPadding</code> 加在<strong>內容</strong>的頭尾，捲動時項目可以滑進留白區域，不會被裁切 —— 相當於 RecyclerView 的 <code>clipToPadding="false"</code>。</p>
+        <div class="example" data-id="lists-row" data-height="240" data-hint="試試看：在卡片上按住並左右拖曳，或用觸控板水平滑動"></div>
+      </section>
+
+      <section class="lesson" id="grid">
+        <h2>LazyVerticalGrid</h2>
+        <span class="part-label">說明</span>
+        <p>網格版本，取代 <code>GridLayoutManager</code>。<code>GridCells</code> 決定欄位怎麼切：</p>
+        <ul>
+          <li><code>GridCells.Fixed(3)</code>：固定 3 欄。</li>
+          <li><code>GridCells.Adaptive(72.dp)</code>：每欄至少 72dp，依可用寬度自動決定欄數，在平板與手機上都好看。</li>
+        </ul>
+        <div class="example" data-id="lists-grid" data-height="360"></div>
+      </section>
+
+      <section class="lesson" id="scroll-state">
+        <h2>捲動狀態與 derivedStateOf</h2>
+        <span class="part-label">說明</span>
+        <p><code>rememberLazyListState()</code> 可以讀取目前捲動位置，也能用程式控制捲動（<code>animateScrollToItem</code> 是 suspend 函式，要用 <code>rememberCoroutineScope</code> 啟動）。</p>
+        <p>捲動位置每一幀都在變，如果直接在 Composable 裡讀 <code>firstVisibleItemIndex</code> 來判斷要不要顯示按鈕，會造成大量不必要的重組。用 <code>derivedStateOf</code> 包起來，只有在「布林值本身」改變時才會觸發重組。</p>
+        <div class="example" data-id="lists-scroll-state" data-height="360" data-hint="試試看：往下捲超過第 5 列，右下角會出現按鈕"></div>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

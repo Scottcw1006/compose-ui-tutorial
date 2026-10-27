@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Modifier · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 2 章 · 基礎排版</p>
+      <h1>Modifier</h1>
+      <p class="lead">在 XML 裡，尺寸、padding、背景、點擊事件分散在一堆 attribute 與 <code>setOnClickListener</code> 中。Compose 把這些全部統一成 <code>Modifier</code>：一條可以串接的裝飾鏈，套在任何 Composable 上。</p>
+
+      <section class="lesson" id="order">
+        <h2>順序很重要</h2>
+        <span class="part-label">說明</span>
+        <p>這是從 View 系統轉過來最容易踩的坑。Modifier 會<strong>由外而內、依序</strong>套用，每一個 Modifier 都包住後面的所有東西。所以 <code>padding</code> 寫在 <code>background</code> 前面，留白就在色塊外（像 margin）；寫在後面，留白就在色塊內（像 padding）。</p>
+        <p>這也是為什麼 Compose 沒有 <code>margin</code> —— 你只需要調整 <code>padding</code> 的位置。</p>
+        <div class="example" data-id="modifier-order" data-height="160"></div>
+      </section>
+
+      <section class="lesson" id="size">
+        <h2>尺寸：size 與 fillMax*</h2>
+        <span class="part-label">說明</span>
+        <p>對應 <code>layout_width</code> / <code>layout_height</code>：</p>
+        <table class="compare">
+          <tr><th>XML</th><th>Compose</th></tr>
+          <tr><td><code>wrap_content</code></td><td>不加任何尺寸 Modifier（預設行為）</td></tr>
+          <tr><td><code>match_parent</code></td><td><code>fillMaxWidth()</code> / <code>fillMaxHeight()</code> / <code>fillMaxSize()</code></td></tr>
+          <tr><td><code>120dp</code></td><td><code>width(120.dp)</code> / <code>size(120.dp)</code></td></tr>
+          <tr><td>（無直接對應）</td><td><code>fillMaxWidth(0.5f)</code>：佔父層寬度的 50%</td></tr>
+        </table>
+        <div class="example" data-id="modifier-size" data-height="280"></div>
+      </section>
+
+      <section class="lesson" id="clickable">
+        <h2>clickable：點擊與水波紋</h2>
+        <span class="part-label">說明</span>
+        <p><code>Modifier.clickable</code> 取代 <code>setOnClickListener</code>，同時自動提供 Material 水波紋（ripple）與無障礙語意。</p>
+        <p>注意順序再次登場：<code>clip</code> 要寫在 <code>clickable</code> 前面，水波紋才會被裁成圓角；反過來寫，水波紋會是方形的超出圓角。</p>
+        <div class="example" data-id="modifier-clickable" data-height="220" data-hint="試試看：點擊卡片"></div>
+      </section>
+
+      <section class="lesson" id="shape">
+        <h2>形狀：clip、border、shadow</h2>
+        <span class="part-label">說明</span>
+        <p>過去要做圓角或陰影，需要建立 <code>shape drawable</code> XML、設定 <code>elevation</code> 與 <code>outlineProvider</code>。在 Compose 中，形狀是一個 <code>Shape</code> 物件，可以直接傳給 <code>clip</code>、<code>border</code>、<code>background</code>、<code>shadow</code>。</p>
+        <ul>
+          <li><code>CircleShape</code>：圓形</li>
+          <li><code>RoundedCornerShape(16.dp)</code>：圓角，也可以四個角各自指定</li>
+          <li><code>CutCornerShape(...)</code>：切角</li>
+        </ul>
+        <div class="example" data-id="modifier-shape" data-height="160"></div>
+        <aside class="tip">
+          <p><strong>慣例：</strong>自訂 Composable 時，第一個選填參數一律命名為 <code>modifier: Modifier = Modifier</code>，並套用在最外層元件上。這讓呼叫端可以從外部調整你的元件，是 Compose 官方 API 都遵守的規則。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

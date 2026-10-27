@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>State 與重組 · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 3 章 · 狀態與資料</p>
+      <h1>State 與重組</h1>
+      <p class="lead">View 系統是「命令式」的：資料變了，你要自己呼叫 <code>textView.setText()</code> 去改畫面。Compose 是「宣告式」的：你描述「資料長這樣時，畫面長這樣」，資料一變，Compose 會自動重新執行相關的函式 —— 這個過程叫做<strong>重組（Recomposition）</strong>。</p>
+
+      <section class="lesson" id="remember">
+        <h2>remember 與 mutableStateOf</h2>
+        <span class="part-label">說明</span>
+        <p>要讓畫面隨資料更新，需要兩樣東西：</p>
+        <ul>
+          <li><code>mutableStateOf(...)</code>：一個「可被觀察」的值。讀取它的 Composable 會被 Compose 記下來，值改變時就會重組。</li>
+          <li><code>remember { ... }</code>：Composable 函式每次重組都會重新執行，<code>remember</code> 讓值在重組之間保留下來，否則每次都會被重設成初始值。</li>
+        </ul>
+        <p><code>by</code> 是 Kotlin 的屬性委派，讓你直接讀寫 <code>count</code> 而不用寫 <code>count.value</code>。數字型別建議用 <code>mutableIntStateOf</code>，可以避免裝箱（boxing）。</p>
+        <div class="example" data-id="state-counter" data-height="220" data-hint="試試看：點擊按鈕"></div>
+        <aside class="warn">
+          <p><code>remember</code> 只在重組之間保留值。在 Android 上遇到旋轉螢幕等 configuration change 時，要改用 <code>rememberSaveable</code>，或把狀態放進 <code>ViewModel</code>。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="textfield">
+        <h2>輸入框：單一資料來源</h2>
+        <span class="part-label">說明</span>
+        <p><code>TextField</code> 本身<strong>不保存文字</strong>。它只顯示你給的 <code>value</code>，使用者輸入時透過 <code>onValueChange</code> 通知你，由你決定要不要更新狀態。</p>
+        <p>這和 <code>EditText</code> 自己管理內容、你再用 <code>TextWatcher</code> 監聽的方式完全相反。好處是狀態永遠只有一份，輸入框、下方的問候語、字數統計都讀同一個變數，不可能不同步。</p>
+        <div class="example" data-id="state-textfield" data-height="220" data-hint="試試看：點擊輸入框後打字"></div>
+      </section>
+
+      <section class="lesson" id="hoisting">
+        <h2>狀態提升（State Hoisting）</h2>
+        <span class="part-label">說明</span>
+        <p>當多個元件需要共用同一份狀態時，把狀態「提升」到它們共同的父層，子元件只接收兩樣東西：</p>
+        <ul>
+          <li><strong>value</strong>：目前要顯示的值</li>
+          <li><strong>onValueChange</strong>：要求改變的事件</li>
+        </ul>
+        <p>這樣的子元件稱為<strong>無狀態（stateless）</strong>元件，好處是容易重複使用、容易測試、也容易在 Preview 中預覽。下面的 <code>Stepper</code> 不知道自己是在數蘋果還是橘子，總數則由父層計算。</p>
+        <div class="example" data-id="state-hoisting" data-height="220" data-hint="試試看：調整數量，總數會即時更新"></div>
+        <aside class="tip">
+          <p><strong>原則：</strong>狀態往下傳，事件往上丟（state flows down, events flow up）。實務上，畫面層級的狀態通常會一路提升到 <code>ViewModel</code>，以 <code>StateFlow</code> 暴露，再在 Composable 中用 <code>collectAsStateWithLifecycle()</code> 收集。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

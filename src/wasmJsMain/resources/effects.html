@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>graphicsLayer 視覺特效 · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 8 章 · 動畫與特效</p>
+      <h1>graphicsLayer 視覺特效</h1>
+      <p class="lead"><code>Modifier.graphicsLayer</code> 把元件繪製到一個獨立的圖層上，再對整個圖層做縮放、旋轉、透明度、裁切與合成。它相當於 View 的 <code>setScaleX</code>、<code>setRotationY</code>、<code>setAlpha</code> 加上 <code>setLayerType(LAYER_TYPE_HARDWARE)</code>，是做出流暢特效的核心工具。</p>
+
+      <section class="lesson" id="layer">
+        <h2>變形與透明度</h2>
+        <span class="part-label">說明</span>
+        <p><code>graphicsLayer { }</code> 的屬性只影響<strong>繪製</strong>，不影響排版：元件放大兩倍，佔用的空間還是原本的大小，也不會推擠旁邊的元件 —— 和 View 的 <code>scaleX</code> 行為一致。</p>
+        <p>因為使用 lambda 版本，滑桿拖動時只會更新圖層屬性並重新繪製，不會重組也不會重新排版，這也是它適合做動畫的原因。</p>
+        <div class="example" data-id="fx-layer" data-height="360" data-hint="試試看：拖動三個滑桿"></div>
+        <aside class="warn">
+          <p>不要在 lambda 裡使用和 <code>GraphicsLayerScope</code> 屬性同名的變數，例如區域變數 <code>alpha</code>。<code>alpha = alpha</code> 會被解析成區域變數指派給自己，圖層的透明度根本不會改變。範例中刻意命名為 <code>opacity</code>。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="flip">
+        <h2>3D 翻轉卡片</h2>
+        <span class="part-label">說明</span>
+        <p><code>rotationX</code> / <code>rotationY</code> 讓元件繞 X 軸或 Y 軸做 3D 旋轉。兩個細節決定效果好不好：</p>
+        <ul>
+          <li><strong><code>cameraDistance</code></strong>：預設的相機距離很近，翻轉時邊緣會誇張地放大。拉遠一點（例如 <code>12f * density</code>）效果較自然。</li>
+          <li><strong>轉過 90 度時切換內容</strong>：背面要再套一次 <code>rotationY = 180f</code>，否則文字會左右相反。</li>
+        </ul>
+        <div class="example" data-id="fx-flip" data-height="240" data-hint="試試看：點擊卡片翻面"></div>
+      </section>
+
+      <section class="lesson" id="shimmer">
+        <h2>漸層動畫：骨架屏閃光</h2>
+        <span class="part-label">說明</span>
+        <p>載入中的骨架屏（skeleton）是由一條移動的 <code>linearGradient</code> 構成的：用無限動畫讓漸層的起點從元件左側外面一路移動到右側外面。</p>
+        <p>重點在 <code>shimmer</code> 這個自訂 Modifier 接收的是 <code>() -&gt; Float</code> 而不是 <code>Float</code>：動畫值只會在 <code>drawBehind</code> 裡、也就是繪製階段被讀取，所以每一幀只重畫，畫面上十幾個閃光元件完全不會重組。這是 Compose 效能最佳化中最常用的技巧：<strong>盡量把讀取狀態的時間點往後延</strong>。</p>
+        <div class="example" data-id="fx-shimmer" data-height="320"></div>
+      </section>
+
+      <section class="lesson" id="spotlight">
+        <h2>BlendMode：聚光燈遮罩</h2>
+        <span class="part-label">說明</span>
+        <p>想在圖層上「挖洞」，需要兩個步驟：</p>
+        <ol>
+          <li><code>compositingStrategy = CompositingStrategy.Offscreen</code>：先把這一層畫到一張獨立的離屏緩衝區。少了這一步，挖洞時會連底下的內容一起挖掉，只剩一片黑。</li>
+          <li>先畫滿一層深色，再用 <code>BlendMode.DstOut</code> 畫一個放射漸層的圓：圓越不透明的地方，遮罩被擦掉越多，就形成柔邊的聚光燈。</li>
+        </ol>
+        <p>指標位置用的是底層 API <code>awaitPointerEventScope</code>：它能收到滑鼠懸停時的移動事件，這是 <code>detectDragGestures</code> 這類高階偵測器做不到的。</p>
+        <div class="example" data-id="fx-spotlight" data-height="300" data-hint="試試看：滑鼠在畫面上移動（觸控裝置請按住拖曳）"></div>
+      </section>
+
+      <section class="lesson" id="blur">
+        <h2>模糊效果</h2>
+        <span class="part-label">說明</span>
+        <p><code>Modifier.blur(radius)</code> 會模糊元件及其所有子元件，常用在對話框背後、或隱藏敏感內容。</p>
+        <div class="example" data-id="fx-blur" data-height="320" data-hint="試試看：拖動滑桿調整模糊程度"></div>
+        <aside class="warn">
+          <p><strong>Android 版本限制：</strong>在 Android 上，<code>blur</code> 依賴 <code>RenderEffect</code>，只在 Android 12（API 31）以上生效，舊版本會直接忽略、顯示清晰的內容。需要支援舊裝置時，請準備替代設計，例如半透明遮罩。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

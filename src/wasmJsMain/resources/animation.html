@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>動畫基礎 · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 5 章 · 動畫與特效</p>
+      <h1>動畫基礎</h1>
+      <p class="lead">在 View 系統做動畫，要在 <code>ValueAnimator</code>、<code>ObjectAnimator</code>、<code>TransitionManager</code>、<code>MotionLayout</code> 之間挑選。Compose 的動畫建立在「狀態」之上：你只要改變狀態，告訴 Compose 要用什麼方式過渡，剩下的它會處理。</p>
+
+      <section class="lesson" id="as-state">
+        <h2>animate*AsState：最簡單的動畫</h2>
+        <span class="part-label">說明</span>
+        <p>把原本寫死的目標值，換成 <code>animateDpAsState</code>、<code>animateColorAsState</code>、<code>animateFloatAsState</code>… 就完成了。每當 <code>targetValue</code> 改變，它會從<strong>目前的值</strong>平滑地動畫到新值 —— 動畫進行到一半再點一次，也會自然地轉向，不會跳回起點。</p>
+        <p><code>animationSpec</code> 決定動畫的「手感」：</p>
+        <ul>
+          <li><code>spring(...)</code>：物理彈簧，預設值，適合大部分互動。</li>
+          <li><code>tween(durationMillis, easing)</code>：固定時長，搭配 easing 曲線。</li>
+        </ul>
+        <div class="example" data-id="anim-as-state" data-height="260" data-hint="試試看：連續快速點擊方塊"></div>
+      </section>
+
+      <section class="lesson" id="visibility">
+        <h2>AnimatedVisibility：出現與消失</h2>
+        <span class="part-label">說明</span>
+        <p>取代 <code>view.visibility = View.GONE</code> 再自己做淡出。<code>enter</code> / <code>exit</code> 用 <code>+</code> 組合多種效果：<code>fadeIn</code>、<code>slideIn*</code>、<code>expand*</code>、<code>scaleIn</code>…</p>
+        <p>使用 <code>expandVertically</code> / <code>shrinkVertically</code> 時，元件佔用的空間也會一起變化，所以下方的內容會平滑地移動，而不是瞬間跳上去。</p>
+        <div class="example" data-id="anim-visibility" data-height="240" data-hint="試試看：點擊 Hide / Show"></div>
+      </section>
+
+      <section class="lesson" id="content">
+        <h2>AnimatedContent：內容切換</h2>
+        <span class="part-label">說明</span>
+        <p>當同一個位置要從 A 內容換成 B 內容（數字、分頁、載入中 → 結果），用 <code>AnimatedContent</code>。<code>transitionSpec</code> 可以讀到 <code>initialState</code> 與 <code>targetState</code>，依「變大還是變小」選擇不同方向，<code>togetherWith</code> 把進場與退場動畫組合起來。</p>
+        <p>重點是 lambda 參數 <code>value</code>：一定要用它，而不是外面的 <code>count</code>，否則退場中的舊內容也會顯示新數字。</p>
+        <div class="example" data-id="anim-content" data-height="240" data-hint="試試看：交替點擊 +1 與 -1，觀察滑動方向"></div>
+      </section>
+
+      <section class="lesson" id="content-size">
+        <h2>animateContentSize：尺寸自動補間</h2>
+        <span class="part-label">說明</span>
+        <p>只要加上一行 <code>Modifier.animateContentSize()</code>，元件因為內容改變而變大、變小時，就會自動動畫過渡。展開 / 收合的卡片、可展開的說明文字，用它最省事。</p>
+        <p>和其他 Modifier 一樣要注意順序：它要放在 <code>size</code>、<code>defaultMinSize</code> 這類尺寸 Modifier 之前，動畫才會平滑。</p>
+        <div class="example" data-id="anim-content-size" data-height="260" data-hint="試試看：點擊卡片展開 / 收合"></div>
+      </section>
+
+      <section class="lesson" id="transition">
+        <h2>updateTransition：一個狀態驅動多個動畫</h2>
+        <span class="part-label">說明</span>
+        <p>當多個屬性要跟著同一個狀態一起變化時，與其寫好幾個獨立的 <code>animate*AsState</code>，不如用 <code>updateTransition</code>。它保證所有子動畫同步開始與結束，也能在 Android Studio 的 Animation Preview 中逐幀檢查。</p>
+        <div class="example" data-id="anim-transition" data-height="260" data-hint="試試看：點擊卡片切換選取狀態"></div>
+      </section>
+
+      <section class="lesson" id="infinite">
+        <h2>rememberInfiniteTransition：無限循環</h2>
+        <span class="part-label">說明</span>
+        <p>Loading、呼吸燈、骨架屏的閃爍效果，都屬於「沒有結束狀態」的動畫，用 <code>rememberInfiniteTransition</code> 搭配 <code>infiniteRepeatable</code>。<code>RepeatMode.Reverse</code> 會來回播放，<code>Restart</code> 則每次從頭開始。</p>
+        <p>這裡用 <code>graphicsLayer</code> 套用縮放與旋轉：它只在繪製階段生效，不會觸發重新量測與排版，是做高頻率動畫時效能最好的方式。第 8 章「graphicsLayer 視覺特效」會更深入介紹它。</p>
+        <div class="example" data-id="anim-infinite" data-height="220"></div>
+        <aside class="tip">
+          <p><strong>效能提示：</strong>在 <code>graphicsLayer { }</code>、<code>Modifier.offset { }</code>、<code>drawBehind { }</code> 這類 lambda 版本的 Modifier 中讀取動畫值，Compose 可以跳過重組、只重新繪製。高頻動畫優先考慮這些寫法。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Column、Row、Box · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 1 章 · 基礎排版</p>
+      <h1>Column、Row、Box</h1>
+      <p class="lead">Compose 的排版只靠三個基本容器就能組出絕大多數畫面。如果你熟悉 XML，可以把它們想成更輕量、可以任意巢狀而不怕效能問題的 <code>LinearLayout</code> 與 <code>FrameLayout</code>。</p>
+
+      <table class="compare">
+        <tr><th>Compose</th><th>View 系統中最接近的東西</th><th>用途</th></tr>
+        <tr><td><code>Column</code></td><td><code>LinearLayout</code>（vertical）</td><td>子元件由上往下排</td></tr>
+        <tr><td><code>Row</code></td><td><code>LinearLayout</code>（horizontal）</td><td>子元件由左往右排</td></tr>
+        <tr><td><code>Box</code></td><td><code>FrameLayout</code></td><td>子元件互相疊加</td></tr>
+      </table>
+
+      <section class="lesson" id="column">
+        <h2>Column：垂直排列</h2>
+        <span class="part-label">說明</span>
+        <p><code>Column</code> 會把子元件由上往下依序放置。兩個最常用的參數：</p>
+        <ul>
+          <li><code>verticalArrangement</code>：控制子元件在<strong>主軸</strong>（垂直方向）上怎麼分配空間，例如 <code>Arrangement.spacedBy(8.dp)</code> 讓每個子元件之間固定間隔 8dp —— 不用再對每個 View 設 <code>marginTop</code>。</li>
+          <li><code>horizontalAlignment</code>：控制子元件在<strong>交叉軸</strong>（水平方向）上的對齊，相當於 <code>android:gravity</code>。</li>
+        </ul>
+        <div class="example" data-id="layout-column" data-height="240"></div>
+      </section>
+
+      <section class="lesson" id="row">
+        <h2>Row：水平排列</h2>
+        <span class="part-label">說明</span>
+        <p><code>Row</code> 是水平版的 <code>Column</code>，參數名稱也對調：<code>horizontalArrangement</code> 管主軸、<code>verticalAlignment</code> 管交叉軸。</p>
+        <p>下面這個「列表項目」是 App 中最常見的排版：左邊頭像、中間兩行文字、右邊操作元件。中間的 <code>Column</code> 加上 <code>Modifier.weight(1f)</code>，就會吃掉所有剩餘寬度，把 Checkbox 推到最右邊。</p>
+        <div class="example" data-id="layout-row" data-height="120" data-hint="試試看：點擊右邊的 Checkbox"></div>
+        <aside class="tip">
+          <p><strong>為什麼可以放心巢狀？</strong> View 系統裡多層 <code>LinearLayout</code> 搭配 weight 會造成多次 measure，所以我們習慣改用 <code>ConstraintLayout</code> 攤平。Compose 的排版規定每個子元件只能被量測一次，巢狀的成本很低，直接用 Row / Column 組合通常就是最好的寫法。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="box">
+        <h2>Box：疊加排版</h2>
+        <span class="part-label">說明</span>
+        <p><code>Box</code> 把所有子元件疊在一起，<strong>後宣告的在上層</strong>。<code>contentAlignment</code> 決定預設對齊位置，個別子元件也可以用 <code>Modifier.align(...)</code> 覆寫 —— 這個 <code>align</code> 只在 <code>BoxScope</code> 裡才能使用，編譯器會幫你擋掉錯誤用法。</p>
+        <p>常見用途：在圖片上疊文字、角落的通知徽章（badge）、在內容上蓋一層 loading。</p>
+        <div class="example" data-id="layout-box" data-height="260"></div>
+      </section>
+
+      <section class="lesson" id="arrangement">
+        <h2>Arrangement：分配主軸空間</h2>
+        <span class="part-label">說明</span>
+        <p>當容器比子元件總寬度更大時，<code>Arrangement</code> 決定多出來的空間怎麼分配。<code>SpaceBetween</code>、<code>SpaceAround</code>、<code>SpaceEvenly</code> 的差別光看文字很難記，直接點下面的選項切換看看。</p>
+        <div class="example" data-id="layout-arrangement" data-height="320" data-hint="試試看：點擊下方 Chip 切換 Arrangement"></div>
+        <ul>
+          <li><code>SpaceBetween</code>：頭尾貼齊邊緣，中間平均分配。</li>
+          <li><code>SpaceAround</code>：每個子元件兩側的空間相等，所以邊緣空間是中間的一半。</li>
+          <li><code>SpaceEvenly</code>：所有間隔（包含邊緣）完全相等。</li>
+        </ul>
+      </section>
+
+      <section class="lesson" id="weight">
+        <h2>weight：按比例分配</h2>
+        <span class="part-label">說明</span>
+        <p><code>Modifier.weight()</code> 和 <code>layout_weight</code> 的概念相同：先量測固定尺寸的子元件，剩下的空間再依權重比例分配。不同的是，你不需要再寫 <code>layout_width="0dp"</code> 這種技巧。</p>
+        <p>另一個實用技巧：在 <code>Column</code> 中放一個 <code>Spacer(Modifier.weight(1f))</code>，它會撐開所有剩餘空間，把後面的元件推到底部。</p>
+        <div class="example" data-id="layout-weight" data-height="260"></div>
+        <aside class="warn">
+          <p><code>weight</code> 只存在於 <code>RowScope</code> 與 <code>ColumnScope</code>，所以只能用在 Row / Column 的直接子元件上。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

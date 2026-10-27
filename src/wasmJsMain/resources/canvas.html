@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Canvas 自訂繪圖 · Compose 實戰教學</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="index.html"><span class="logo">C</span>Compose 實戰教學</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 7 章 · 動畫與特效</p>
+      <h1>Canvas 自訂繪圖</h1>
+      <p class="lead">以前自訂繪圖要繼承 <code>View</code>、覆寫 <code>onDraw(canvas)</code>、自己管理 <code>Paint</code> 物件並記得呼叫 <code>invalidate()</code>。在 Compose 中，繪圖只是一個 Composable 或一個 Modifier，讀取的狀態改變時會自動重畫。</p>
+
+      <section class="lesson" id="basics">
+        <h2>Canvas 與 DrawScope</h2>
+        <span class="part-label">說明</span>
+        <p><code>Canvas</code> 的 lambda 在 <code>DrawScope</code> 裡執行，提供 <code>drawRect</code>、<code>drawCircle</code>、<code>drawLine</code>、<code>drawArc</code>、<code>drawPath</code> 等函式。和舊的 Canvas API 最大的差別：</p>
+        <ul>
+          <li><strong>不需要 <code>Paint</code></strong>：顏色、筆刷、樣式都直接當參數傳入。</li>
+          <li><strong>座標是 px</strong>：<code>DrawScope</code> 本身就是 <code>Density</code>，可以直接呼叫 <code>16.dp.toPx()</code>。</li>
+          <li><strong><code>size</code> 與 <code>center</code></strong>：隨時可以取得畫布大小與中心點，不用再在 <code>onSizeChanged</code> 裡記錄。</li>
+          <li><strong>填滿或描邊</strong>：預設是填滿，傳入 <code>style = Stroke(...)</code> 改成描邊，取代 <code>Paint.Style.STROKE</code>。</li>
+        </ul>
+        <div class="example" data-id="canvas-basics" data-height="280"></div>
+      </section>
+
+      <section class="lesson" id="path">
+        <h2>Path：任意形狀</h2>
+        <span class="part-label">說明</span>
+        <p>基本圖形不夠用時，用 <code>Path</code> 描述輪廓：<code>moveTo</code> 移動筆尖、<code>lineTo</code> 畫直線、<code>quadraticTo</code> / <code>cubicTo</code> 畫曲線、<code>close</code> 封閉路徑。</p>
+        <p>同一條 Path 可以畫兩次：一次用漸層 <code>Brush</code> 填滿，一次用 <code>Stroke</code> 描邊。</p>
+        <div class="example" data-id="canvas-path" data-height="260"></div>
+      </section>
+
+      <section class="lesson" id="ring">
+        <h2>結合動畫：進度環</h2>
+        <span class="part-label">說明</span>
+        <p>Canvas 和動畫是天作之合：把 <code>animateFloatAsState</code> 的值拿來當 <code>sweepAngle</code>，進度改變時圓弧就會平滑地增長或縮短。自訂圖表、儀表板、計時器都是這個模式。</p>
+        <p>常見陷阱：描邊是沿著路徑中心往兩側擴張的，所以畫圓弧時要往內縮半個筆畫寬度，否則外側會被裁掉。</p>
+        <div class="example" data-id="canvas-ring" data-height="300" data-hint="試試看：按 Randomize"></div>
+      </section>
+
+      <section class="lesson" id="drawing">
+        <h2>結合手勢：塗鴉板</h2>
+        <span class="part-label">說明</span>
+        <p>把上一章的 <code>detectDragGestures</code> 套在 <code>Canvas</code> 上，記錄手指經過的座標點，每一筆畫轉成一條 <code>Path</code> 畫出來。</p>
+        <p>已完成的筆畫存在 <code>mutableStateListOf</code> 中：對這種清單呼叫 <code>add</code>、<code>clear</code> 也會被 Compose 觀察到並觸發重畫，不需要整個替換清單。</p>
+        <div class="example" data-id="canvas-drawing" data-height="320" data-hint="試試看：在畫面上按住拖曳畫畫"></div>
+      </section>
+
+      <section class="lesson" id="draw-modifier">
+        <h2>drawBehind 與 drawWithContent</h2>
+        <span class="part-label">說明</span>
+        <p>不一定要用 <code>Canvas</code>。想在既有元件上加一點裝飾，用繪圖 Modifier 更方便：</p>
+        <ul>
+          <li><code>Modifier.drawBehind { }</code>：畫在內容<strong>後面</strong>，例如螢光筆底線、自訂背景。</li>
+          <li><code>Modifier.drawWithContent { }</code>：由你呼叫 <code>drawContent()</code>，可以決定裝飾要畫在內容前面還是後面，例如未讀紅點、浮水印。</li>
+          <li><code>Modifier.drawWithCache { }</code>：需要建立 <code>Path</code>、<code>Brush</code> 這類物件時使用，只在尺寸或讀取的狀態改變時重建，避免每一幀都配置新物件。</li>
+        </ul>
+        <div class="example" data-id="canvas-draw-modifier" data-height="260"></div>
+        <aside class="tip">
+          <p>其實 <code>Canvas(modifier) { }</code> 的實作就是 <code>Spacer(modifier.drawBehind { })</code>。所以 Canvas 本身沒有大小，一定要透過 Modifier 指定尺寸，否則什麼都看不到。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>
