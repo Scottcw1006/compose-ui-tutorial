@@ -46,7 +46,7 @@
         <h2>rememberCoroutineScope：由事件啟動的協程</h2>
         <span class="part-label">說明</span>
         <p><code>LaunchedEffect</code> 由「進入組合」或「key 改變」觸發；但很多工作是由<strong>使用者事件</strong>觸發的，例如點擊按鈕。<code>onClick</code> 不是 Composable，也不是 suspend 函式，這時要用 <code>rememberCoroutineScope()</code> 取得一個 scope，再 <code>scope.launch { }</code>。這個 scope 綁定在 Composable 上，離開畫面時所有協程一起被取消，不會洩漏。</p>
-        <p>取消是<strong>協作式</strong>的：<code>job.cancel()</code> 只是發出取消請求，協程要執行到<strong>取消點</strong>（<code>delay</code>、<code>yield</code>、其他 suspend 函式）時才會丟出 <code>CancellationException</code> 結束。捕捉它做清理沒問題，但一定要重新丟出。</p>
+        <p>取消是<strong>協作式</strong>的：<code>job.cancel()</code> 只是發出取消請求，協程要執行到<strong>取消點</strong>（<code>delay</code>、<code>yield</code>、其他 suspend 函式）時才會丟出 <code>CancellationException</code> 結束。單純的清理工作放在 <code>finally</code> 即可；如果需要捕捉它（例如更新畫面上的狀態文字），處理完一定要重新丟出，否則取消會被當成一般錯誤吞掉，後面的程式也會繼續執行。</p>
         <div class="example" data-id="co-scope" data-height="260" data-hint="試試看：按 Start，下載到一半時按 Cancel"></div>
       </section>
 
@@ -83,7 +83,7 @@
       <section class="lesson" id="snapshot-flow">
         <h2>snapshotFlow：把 State 變成 Flow</h2>
         <span class="part-label">說明</span>
-        <p>反過來，有時要對 Compose 的 <code>State</code> 套用 Flow 的運算子，例如「停止拖動後才儲存」、「捲動位置變化時記錄」。<code>snapshotFlow { }</code> 會在區塊中讀到的 State 改變時發出新值，接著就能使用 <code>debounce</code>、<code>filter</code>、<code>distinctUntilChanged</code> 等運算子。</p>
+        <p>反過來，有時要對 Compose 的 <code>State</code> 套用 Flow 的運算子，例如「停止拖動後才儲存」、「捲動位置變化時記錄」。<code>snapshotFlow { }</code> 會在區塊中讀到的 State 改變、且區塊的<strong>計算結果</strong>和上一次不同時發出新值（已內建去重，不需要再加 <code>distinctUntilChanged</code>），接著就能使用 <code>debounce</code>、<code>filter</code>、<code>map</code> 等運算子。</p>
         <p>拖動滑桿時 <code>onValueChange</code> 每秒觸發數十次，經過 <code>debounce(600)</code> 後只在停手後存一次。<code>drop(1)</code> 用來略過一開始收集時就會發出的初始值。</p>
         <div class="example" data-id="co-snapshot-flow" data-height="320" data-hint="試試看：來回拖動滑桿再放開，比較 changes 與 saves 的數量"></div>
       </section>
@@ -113,7 +113,7 @@ val user by viewModel.user.observeAsState()
 val items by viewModel.items.subscribeAsState(initial = emptyList())</code></pre>
         </div>
         <p>它們的原理都是 <strong><code>DisposableEffect</code></strong>：進入組合時訂閱，離開組合時在 <code>onDispose</code> 取消訂閱。凡是「註冊 / 取消註冊」成對出現的 API（listener、<code>BroadcastReceiver</code>、<code>LifecycleObserver</code>），都適合用它。</p>
-        <p>網頁無法執行 LiveData 和 RxJava，所以範例自己做了一個極簡的 <code>MiniLiveData</code> 與 <code>observeAsState</code>，寫法和官方實作相同。按 Hide 讓 <code>ScoreBadge</code> 離開組合，observer 數會變成 0；這時繼續加分，再按 Show，會立刻收到最新的分數。</p>
+        <p>網頁無法執行 LiveData 和 RxJava，所以範例自己做了一個極簡的 <code>MiniLiveData</code> 與 <code>observeAsState</code>，原理和官方實作相同；官方版本另外綁定 <code>LifecycleOwner</code>，在畫面低於 STARTED 時不會收到更新，回傳型別也是可為 null 的 <code>State&lt;T?&gt;</code>。按 Hide 讓 <code>ScoreBadge</code> 離開組合，observer 數會變成 0；這時繼續加分，再按 Show，會立刻收到最新的分數。</p>
         <div class="example" data-id="co-interop" data-height="280" data-hint="試試看：按 Hide 後加分，再按 Show，觀察 observer 數量"></div>
         <aside class="warn">
           <p><code>onDispose</code> 是 <code>DisposableEffect</code> 的必要結尾，沒寫會編譯失敗 —— 這是刻意的設計，強迫你想清楚怎麼清理。如果真的沒有東西要清理，通常代表你需要的是 <code>LaunchedEffect</code> 或 <code>SideEffect</code>。</p>

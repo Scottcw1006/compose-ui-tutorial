@@ -128,11 +128,12 @@ fun ScopeLaunchDemo() {
             Button(
                 enabled = !running,
                 onClick = {
+                    // 先在點擊當下更新狀態：launch 是排程執行，等協程開始才設 running 的話，快速連點會啟動兩次
+                    running = true
+                    progress = 0f
+                    status = "Downloading..."
                     // onClick 不是 suspend 函式，要透過 scope.launch 進入協程
                     job = scope.launch {
-                        running = true
-                        progress = 0f
-                        status = "Downloading..."
                         try {
                             for (i in 1..100) {
                                 delay(40) // delay 是取消點：cancel() 之後會在這裡丟出 CancellationException
@@ -141,7 +142,7 @@ fun ScopeLaunchDemo() {
                             status = "Done"
                         } catch (e: CancellationException) {
                             status = "Cancelled at ${(progress * 100).roundToInt()}%"
-                            throw e // 一定要重新丟出，協程才會正確結束
+                            throw e // 重新丟出：不要把取消當成一般錯誤吞掉、讓後面的程式繼續執行
                         } finally {
                             running = false
                         }
@@ -172,20 +173,22 @@ fun ParallelDemo() {
     var loading by remember { mutableStateOf(false) }
     var result by remember { mutableStateOf("Pick a strategy") }
 
-    fun load(parallel: Boolean) = scope.launch {
-        loading = true
-        val start = TimeSource.Monotonic.markNow()
-        val text = if (parallel) {
-            // async 立刻啟動、回傳 Deferred；await 才等待結果 → 兩個請求同時進行
-            val user = async { fetchUser() }
-            val posts = async { fetchPostCount() }
-            "${user.await()} · ${posts.await()} posts"
-        } else {
-            // 一般的 suspend 呼叫會依序執行：等第一個完成才開始第二個
-            "${fetchUser()} · ${fetchPostCount()} posts"
+    fun load(parallel: Boolean) {
+        loading = true // 在 launch 之前設定，避免快速連點啟動兩次
+        scope.launch {
+            val start = TimeSource.Monotonic.markNow()
+            val text = if (parallel) {
+                // async 立刻啟動、回傳 Deferred；await 才等待結果 → 兩個請求同時進行
+                val user = async { fetchUser() }
+                val posts = async { fetchPostCount() }
+                "${user.await()} · ${posts.await()} posts"
+            } else {
+                // 一般的 suspend 呼叫會依序執行：等第一個完成才開始第二個
+                "${fetchUser()} · ${fetchPostCount()} posts"
+            }
+            result = "$text\n${start.elapsedNow().inWholeMilliseconds} ms"
+            loading = false
         }
-        result = "$text\n${start.elapsedNow().inWholeMilliseconds} ms"
-        loading = false
     }
 
     Column(

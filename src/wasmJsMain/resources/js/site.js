@@ -134,6 +134,46 @@ function renderToc() {
   sections.forEach((s) => observer.observe(s));
 }
 
+// 即時範例需要瀏覽器支援 WebAssembly GC（Chrome / Edge 119+、Firefox 120+、Safari 18.2+）。
+// 這是一個只宣告一個 GC struct 型別的最小模組：能通過驗證就代表支援。
+function supportsWasmGC() {
+  try {
+    return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 95, 1, 120, 0]));
+  } catch {
+    return false;
+  }
+}
+
+// 把還沒載入完成的範例，從「Compose 載入中…」換成說明文字
+function showDemoMessage(text) {
+  document.querySelectorAll(".device .demo:not([data-ready]) + .loading").forEach((el) => {
+    el.textContent = text;
+    el.classList.add("failed");
+  });
+}
+
+function watchDemoLoading() {
+  if (!document.querySelector("[data-demo]")) return;
+  if (!supportsWasmGC()) {
+    showDemoMessage("你的瀏覽器不支援 WebAssembly GC，無法執行即時範例");
+    const notice = document.createElement("aside");
+    notice.className = "warn";
+    notice.innerHTML =
+      "<p><strong>無法執行即時範例：</strong>這個瀏覽器不支援 WebAssembly GC。代碼與說明仍可正常閱讀；" +
+      "想操作範例，請改用 Chrome / Edge 119、Firefox 120 或 Safari 18.2 以上的版本。</p>";
+    document.querySelector(".content h1")?.after(notice);
+    return;
+  }
+  // 支援但載入失敗（網路中斷、檔案錯誤）或太久沒完成時，也不要讓使用者一直看著「載入中」
+  const nothingReady = () => !document.querySelector("[data-demo][data-ready]");
+  const onFail = () => nothingReady() && showDemoMessage("範例載入失敗，請重新整理頁面");
+  window.addEventListener("error", (e) => {
+    if (e.target?.src?.includes("composeApp") || e.filename?.includes("composeApp")) onFail();
+  }, true);
+  window.addEventListener("unhandledrejection", onFail);
+  setTimeout(() => nothingReady() && showDemoMessage("範例載入時間比預期久，請稍候或重新整理頁面"), 30000);
+}
+
 function setupMenu() {
   document.querySelector(".menu-btn")?.addEventListener("click", () => {
     document.body.classList.toggle("nav-open");
@@ -146,4 +186,5 @@ renderExamples();
 renderToc();
 setupMenu();
 setupCopyButtons();
+watchDemoLoading();
 loadSnippets();

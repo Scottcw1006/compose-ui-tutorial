@@ -63,6 +63,7 @@
         <div class="example" data-id="gesture-swipe" data-height="300" data-hint="試試看：把訊息往左或往右滑掉"></div>
         <aside class="tip">
           <p>實務上，Material 3 已經提供 <code>SwipeToDismissBox</code>，一般列表直接使用即可。理解這個範例的原理後，你就能做出卡片堆疊、底部抽屜這類 Material 元件沒有涵蓋的互動。</p>
+          <p>注意這個簡化版沒有處理「動畫進行中又被抓住」：飛出或彈回的途中再拖曳，手勢與動畫會同時寫入 <code>offsetX</code> 而互相拉扯。<code>SwipeToDismissBox</code> 底層的 <code>AnchoredDraggable</code> 已經處理好這種情況。</p>
         </aside>
       </section>
 

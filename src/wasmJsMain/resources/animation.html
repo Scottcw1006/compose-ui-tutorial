@@ -72,7 +72,7 @@
         <ul>
           <li><strong>依序</strong>：連續呼叫 <code>animateTo</code>，上一段結束才會開始下一段。搖晃就是一個 <code>for</code> 迴圈，不需要 <code>AnimatorSet.playSequentially</code>。</li>
           <li><strong>平行</strong>：用 <code>launch { }</code> 另開一個子協程，例如讓顏色和位移同時變化。</li>
-          <li><strong>中斷</strong>：同一個 <code>Animatable</code> 同時只能跑一個動畫，新的 <code>animateTo</code> 會取消正在執行的那一個，並從<strong>目前的值與速度</strong>接續。<code>snapTo</code> 則不經動畫，直接跳到指定值。</li>
+          <li><strong>中斷</strong>：同一個 <code>Animatable</code> 同時只能跑一個動畫，新的 <code>animateTo</code> 會取消正在執行的那一個，並從<strong>目前的值與速度</strong>接續（速度只對 <code>spring</code> 這類物理型 spec 有效；範例的搖晃用 <code>tween</code>，所以只看得到數值接續）。<code>snapTo</code> 則不經動畫，直接跳到指定值。</li>
         </ul>
         <div class="example" data-id="anim-animatable" data-height="280" data-hint="試試看：按 Wrong PIN，或連續快速點擊打斷搖晃"></div>
         <aside class="tip">
