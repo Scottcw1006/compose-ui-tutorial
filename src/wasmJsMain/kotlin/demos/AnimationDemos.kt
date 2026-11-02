@@ -1,10 +1,12 @@
 package demos
 
+import androidx.compose.animation.Animatable
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColor
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -48,6 +50,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.launch
 
 // [snippet:anim-as-state]
 @Composable
@@ -169,6 +173,63 @@ fun TransitionDemo() {
             contentAlignment = Alignment.Center,
         ) {
             Text(if (selected) "Selected" else "Tap to select", color = fg, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+// [/snippet]
+
+// [snippet:anim-animatable]
+@Composable
+fun AnimatableDemo() {
+    val normal = Color(0xFFEADDFF)
+    val offsetX = remember { Animatable(0f) }
+    val scale = remember { Animatable(1f) }
+    val color = remember { Animatable(normal) }
+    val scope = rememberCoroutineScope()
+    var attempts by remember { mutableIntStateOf(0) }
+
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterVertically),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            Modifier
+                .graphicsLayer {
+                    translationX = offsetX.value.dp.toPx()
+                    scaleX = scale.value
+                    scaleY = scale.value
+                }
+                .size(width = 200.dp, height = 56.dp)
+                .background(color.value, RoundedCornerShape(12.dp)),
+            contentAlignment = Alignment.Center,
+        ) { Text("\u2022 \u2022 \u2022 \u2022", style = MaterialTheme.typography.titleLarge) }
+        Text("Wrong attempts: $attempts", color = Color.Gray)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedButton(onClick = {
+                attempts++
+                scope.launch {
+                    // 平行：另外 launch 一個子協程處理顏色
+                    launch {
+                        color.snapTo(Color(0xFFFFB4AB))
+                        color.animateTo(normal, tween(600))
+                    }
+                    // 依序：每個 animateTo 都等上一段結束才開始
+                    for (x in listOf(-24f, 24f, -16f, 16f, -8f, 0f)) {
+                        offsetX.animateTo(x, tween(50))
+                    }
+                }
+            }) { Text("Wrong PIN") }
+            Button(onClick = {
+                scope.launch {
+                    launch {
+                        color.snapTo(Color(0xFFB7F0C2))
+                        color.animateTo(normal, tween(800))
+                    }
+                    scale.animateTo(1.15f, tween(120))
+                    scale.animateTo(1f, spring(dampingRatio = Spring.DampingRatioMediumBouncy))
+                }
+            }) { Text("Correct") }
         }
     }
 }

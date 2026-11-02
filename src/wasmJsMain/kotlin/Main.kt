@@ -7,6 +7,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeViewport
+import demos.AnimatableDemo
 import demos.AnimateAsStateDemo
 import demos.AnimateContentSizeDemo
 import demos.AnimatedContentDemo
@@ -83,6 +84,7 @@ private val demos: Map<String, @Composable () -> Unit> = mapOf(
     "anim-visibility" to { AnimatedVisibilityDemo() },
     "anim-content" to { AnimatedContentDemo() },
     "anim-transition" to { TransitionDemo() },
+    "anim-animatable" to { AnimatableDemo() },
     "anim-content-size" to { AnimateContentSizeDemo() },
     "anim-infinite" to { InfiniteDemo() },
     "gesture-tap" to { TapGestureDemo() },

@@ -64,6 +64,22 @@
         <div class="example" data-id="anim-transition" data-height="260" data-hint="試試看：點擊卡片切換選取狀態"></div>
       </section>
 
+      <section class="lesson" id="animatable">
+        <h2>Animatable：用協程指揮動畫</h2>
+        <span class="part-label">說明</span>
+        <p>前面的 API 都是「狀態驅動」：你改目標值，Compose 決定怎麼動。有些動畫沒有一個「目標狀態」，而是一段<strong>事件觸發的動作</strong>，例如密碼錯誤時左右搖晃、成功時彈一下。這類動畫用 <code>Animatable</code> 自己控制，它比較接近 View 的 <code>ObjectAnimator</code>。</p>
+        <p><code>animateTo</code> 是 suspend 函式，要在協程裡呼叫（這裡用的是<a href="coroutines.html#scope">第 5 章的 rememberCoroutineScope</a>）。也因為它會等到動畫結束才返回，組合動畫就是在寫一般的程式流程：</p>
+        <ul>
+          <li><strong>依序</strong>：連續呼叫 <code>animateTo</code>，上一段結束才會開始下一段。搖晃就是一個 <code>for</code> 迴圈，不需要 <code>AnimatorSet.playSequentially</code>。</li>
+          <li><strong>平行</strong>：用 <code>launch { }</code> 另開一個子協程，例如讓顏色和位移同時變化。</li>
+          <li><strong>中斷</strong>：同一個 <code>Animatable</code> 同時只能跑一個動畫，新的 <code>animateTo</code> 會取消正在執行的那一個，並從<strong>目前的值與速度</strong>接續。<code>snapTo</code> 則不經動畫，直接跳到指定值。</li>
+        </ul>
+        <div class="example" data-id="anim-animatable" data-height="280" data-hint="試試看：按 Wrong PIN，或連續快速點擊打斷搖晃"></div>
+        <aside class="tip">
+          <p><strong>怎麼選：</strong>畫面「應該長什麼樣子」由狀態決定時，用 <code>animate*AsState</code> 或 <code>updateTransition</code>；動畫是由事件觸發的一連串動作、要接手勢的速度，或需要等動畫結束再做下一件事時，用 <code>Animatable</code>。<a href="gestures.html#swipe">第 7 章的滑動刪除</a>用的 <code>animate()</code> 也屬於這一類。</p>
+        </aside>
+      </section>
+
       <section class="lesson" id="infinite">
         <h2>rememberInfiniteTransition：無限循環</h2>
         <span class="part-label">說明</span>
