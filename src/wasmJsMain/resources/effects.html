@@ -17,7 +17,7 @@
   <div class="layout">
     <nav id="sidebar"></nav>
     <main class="content">
-      <p class="chapter-label">第 8 章 · 動畫與特效</p>
+      <p class="chapter-label">第 9 章 · 動畫與特效</p>
       <h1>graphicsLayer 視覺特效</h1>
       <p class="lead"><code>Modifier.graphicsLayer</code> 把元件繪製到一個獨立的圖層上，再對整個圖層做縮放、旋轉、透明度、裁切與合成。它相當於 View 的 <code>setScaleX</code>、<code>setRotationY</code>、<code>setAlpha</code> 這些 RenderNode 屬性，是做出流暢特效的核心工具。預設情況下它不一定會另外配置離屏緩衝區；需要像 <code>setLayerType(LAYER_TYPE_HARDWARE)</code> 那樣真正畫到獨立緩衝區時，要指定 <code>CompositingStrategy.Offscreen</code>（本章「聚光燈遮罩」會用到）。</p>
 

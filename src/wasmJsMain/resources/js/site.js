@@ -16,6 +16,7 @@ const CHAPTERS = [
     items: [
       { href: "state.html", title: "State 與重組" },
       { href: "lists.html", title: "Lazy 列表" },
+      { href: "coroutines.html", title: "Coroutine 與非同步" },
     ],
   },
   {
@@ -85,6 +86,8 @@ function renderExamples() {
 }
 
 async function loadSnippets() {
+  // 直接寫在 HTML 裡、不需要載入的靜態代碼區塊
+  if (window.hljs) document.querySelectorAll(".code-panel code:not([data-snippet])").forEach((c) => hljs.highlightElement(c));
   const blocks = document.querySelectorAll("code[data-snippet]");
   await Promise.all([...blocks].map(async (code) => {
     try {

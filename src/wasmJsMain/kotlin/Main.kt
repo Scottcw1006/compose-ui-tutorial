@@ -16,15 +16,19 @@ import demos.BlurDemo
 import demos.BoxDemo
 import demos.CanvasBasicsDemo
 import demos.CanvasPathDemo
+import demos.CallbackBridgeDemo
 import demos.CartDemo
 import demos.ColumnDemo
 import demos.CounterDemo
+import demos.DebouncedSearchDemo
 import demos.DragGestureDemo
 import demos.DrawModifierDemo
 import demos.DrawingPadDemo
 import demos.FlipCardDemo
+import demos.FlowCollectDemo
 import demos.GraphicsLayerDemo
 import demos.InfiniteDemo
+import demos.InteropDemo
 import demos.LazyColumnDemo
 import demos.LazyGridDemo
 import demos.LazyRowDemo
@@ -32,10 +36,14 @@ import demos.ModifierClickableDemo
 import demos.ModifierOrderDemo
 import demos.ModifierShapeDemo
 import demos.ModifierSizeDemo
+import demos.ParallelDemo
+import demos.ProduceStateDemo
 import demos.ProgressRingDemo
 import demos.RowDemo
+import demos.ScopeLaunchDemo
 import demos.ScrollToTopDemo
 import demos.ShimmerDemo
+import demos.SnapshotFlowDemo
 import demos.SpotlightDemo
 import demos.SwipeToDismissDemo
 import demos.TapGestureDemo
@@ -63,6 +71,14 @@ private val demos: Map<String, @Composable () -> Unit> = mapOf(
     "lists-row" to { LazyRowDemo() },
     "lists-grid" to { LazyGridDemo() },
     "lists-scroll-state" to { ScrollToTopDemo() },
+    "co-launched-effect" to { DebouncedSearchDemo() },
+    "co-scope" to { ScopeLaunchDemo() },
+    "co-parallel" to { ParallelDemo() },
+    "co-produce-state" to { ProduceStateDemo() },
+    "co-flow" to { FlowCollectDemo() },
+    "co-snapshot-flow" to { SnapshotFlowDemo() },
+    "co-callback" to { CallbackBridgeDemo() },
+    "co-interop" to { InteropDemo() },
     "anim-as-state" to { AnimateAsStateDemo() },
     "anim-visibility" to { AnimatedVisibilityDemo() },
     "anim-content" to { AnimatedContentDemo() },

@@ -17,7 +17,7 @@
   <div class="layout">
     <nav id="sidebar"></nav>
     <main class="content">
-      <p class="chapter-label">第 5 章 · 動畫與特效</p>
+      <p class="chapter-label">第 6 章 · 動畫與特效</p>
       <h1>動畫基礎</h1>
       <p class="lead">在 View 系統做動畫，要在 <code>ValueAnimator</code>、<code>ObjectAnimator</code>、<code>TransitionManager</code>、<code>MotionLayout</code> 之間挑選。Compose 的動畫建立在「狀態」之上：你只要改變狀態，告訴 Compose 要用什麼方式過渡，剩下的它會處理。</p>
 
@@ -68,7 +68,7 @@
         <h2>rememberInfiniteTransition：無限循環</h2>
         <span class="part-label">說明</span>
         <p>Loading、呼吸燈、骨架屏的閃爍效果，都屬於「沒有結束狀態」的動畫，用 <code>rememberInfiniteTransition</code> 搭配 <code>infiniteRepeatable</code>。<code>RepeatMode.Reverse</code> 會來回播放，<code>Restart</code> 則每次從頭開始。</p>
-        <p>這裡用 <code>graphicsLayer</code> 套用縮放與旋轉：它只在繪製階段生效，不會觸發重新量測與排版，是做高頻率動畫時效能最好的方式。第 8 章「graphicsLayer 視覺特效」會更深入介紹它。</p>
+        <p>這裡用 <code>graphicsLayer</code> 套用縮放與旋轉：它只在繪製階段生效，不會觸發重新量測與排版，是做高頻率動畫時效能最好的方式。第 9 章「graphicsLayer 視覺特效」會更深入介紹它。</p>
         <div class="example" data-id="anim-infinite" data-height="220"></div>
         <aside class="tip">
           <p><strong>效能提示：</strong>在 <code>graphicsLayer { }</code>、<code>Modifier.offset { }</code>、<code>drawBehind { }</code> 這類 lambda 版本的 Modifier 中讀取動畫值，Compose 可以跳過重組、只重新繪製。高頻動畫優先考慮這些寫法。</p>
