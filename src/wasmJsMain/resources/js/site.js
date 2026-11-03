@@ -68,7 +68,7 @@ function renderExamples() {
       <div>
         <span class="part-label">代碼</span>
         <div class="code-panel">
-          <div class="panel-head"><span>${id}.kt</span><button class="copy-btn" type="button">複製</button></div>
+          <div class="panel-head"><span>${id}.kt</span><span class="panel-actions"><button class="copy-btn" type="button">複製</button></span></div>
           <pre><code class="language-kotlin" data-snippet="${id}">載入中…</code></pre>
         </div>
       </div>
@@ -85,6 +85,13 @@ function renderExamples() {
   });
 }
 
+function showCode(code, text) {
+  code.textContent = text;
+  if (!window.hljs) return;
+  delete code.dataset.highlighted;
+  hljs.highlightElement(code);
+}
+
 async function loadSnippets() {
   // 直接寫在 HTML 裡、不需要載入的靜態代碼區塊
   if (window.hljs) document.querySelectorAll(".code-panel code:not([data-snippet])").forEach((c) => hljs.highlightElement(c));
@@ -93,8 +100,26 @@ async function loadSnippets() {
     try {
       const res = await fetch(`snippets/${code.dataset.snippet}.kt`);
       if (!res.ok) throw new Error(res.status);
-      code.textContent = await res.text();
-      if (window.hljs) hljs.highlightElement(code);
+      const text = await res.text();
+      // 片段開頭的 import 預設收合，避免蓋過重點；「複製」永遠包含完整內容
+      const lines = text.split("\n");
+      const n = lines.findIndex((l) => !l.startsWith("import ") && l.trim() !== "");
+      const imports = n > 0 ? lines.slice(0, n).filter((l) => l.startsWith("import ")).length : 0;
+      code.fullText = text;
+      code.bodyText = n > 0 ? lines.slice(n).join("\n") : text;
+      if (imports > 0) {
+        const btn = document.createElement("button");
+        btn.className = "imports-btn";
+        btn.type = "button";
+        btn.textContent = `顯示 import（${imports}）`;
+        btn.addEventListener("click", () => {
+          const showing = code.textContent === code.fullText;
+          showCode(code, showing ? code.bodyText : code.fullText);
+          btn.textContent = showing ? `顯示 import（${imports}）` : "隱藏 import";
+        });
+        code.closest(".code-panel").querySelector(".panel-actions").prepend(btn);
+      }
+      showCode(code, code.bodyText);
     } catch (e) {
       code.textContent = `// 無法載入代碼片段：${code.dataset.snippet}`;
     }
@@ -107,7 +132,7 @@ function setupCopyButtons() {
     if (!btn) return;
     const code = btn.closest(".code-panel").querySelector("code");
     try {
-      await navigator.clipboard.writeText(code.textContent);
+      await navigator.clipboard.writeText(code.fullText ?? code.textContent);
       btn.textContent = "已複製";
     } catch {
       btn.textContent = "複製失敗";

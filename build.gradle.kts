@@ -22,15 +22,35 @@ val extractSnippets by tasks.registering {
         out.mkdirs()
         val start = Regex("""^\s*// \[snippet:([\w-]+)]\s*$""")
         val end = Regex("""^\s*// \[/snippet]\s*$""")
+        // 片段只附上它實際用到的 import，讀者複製後就能直接編譯。
+        // `by` 委派用到的 getValue / setValue 不會出現在程式碼裡，要另外判斷。
+        fun importsFor(code: String, fileImports: List<String>): List<String> {
+            val body = code.lines().joinToString("\n") { it.substringBefore("//") }
+            val delegatesVar = Regex("""\bvar\s+\w+\s+by\b""").containsMatchIn(body)
+            val delegatesVal = delegatesVar || Regex("""\bval\s+\w+\s+by\b""").containsMatchIn(body)
+            return fileImports.filter { line ->
+                when (val name = line.removePrefix("import ").substringAfterLast('.')) {
+                    "getValue" -> delegatesVal
+                    "setValue" -> delegatesVar
+                    else -> Regex("""\b${Regex.escape(name)}\b""").containsMatchIn(body)
+                }
+            }
+        }
+
         srcDir.asFile.walkTopDown().filter { it.extension == "kt" }.forEach { file ->
             var id: String? = null
             val buf = mutableListOf<String>()
-            file.readLines().forEach { line ->
+            val lines = file.readLines()
+            val fileImports = lines.filter { it.startsWith("import ") }
+            lines.forEach { line ->
                 val m = start.find(line)
                 when {
                     m != null -> { id = m.groupValues[1]; buf.clear() }
                     id != null && end.matches(line) -> {
-                        File(out, "$id.kt").writeText(buf.joinToString("\n").trimIndent().trim() + "\n")
+                        val code = buf.joinToString("\n").trimIndent().trim()
+                        val imports = importsFor(code, fileImports)
+                        val header = if (imports.isEmpty()) "" else imports.joinToString("\n") + "\n\n"
+                        File(out, "$id.kt").writeText(header + code + "\n")
                         id = null
                     }
                     id != null -> buf += line

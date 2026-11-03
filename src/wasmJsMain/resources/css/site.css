@@ -247,7 +247,8 @@ table.compare th { background: var(--bg-soft); }
   background: rgba(255, 255, 255, 0.04);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
-.copy-btn {
+.panel-actions { display: flex; gap: 6px; }
+.copy-btn, .imports-btn {
   border: 1px solid rgba(255, 255, 255, 0.2);
   background: transparent;
   color: #e6e1e9;
@@ -256,7 +257,7 @@ table.compare th { background: var(--bg-soft); }
   font: inherit;
   cursor: pointer;
 }
-.copy-btn:hover { background: rgba(255, 255, 255, 0.08); }
+.copy-btn:hover, .imports-btn:hover { background: rgba(255, 255, 255, 0.08); }
 .code-panel pre {
   margin: 0;
   max-height: 520px;

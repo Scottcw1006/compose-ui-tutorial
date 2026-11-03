@@ -48,6 +48,8 @@ src/wasmJsMain/
    // [/snippet]
    ```
 
+   建置時會自動在片段開頭補上它用到的 import（取自同一個檔案的 import，`by` 委派需要的 `getValue` / `setValue` 也會判斷），網頁上預設收合。所以片段必須自給自足：不要依賴標記外的輔助函式。
+
 2. 在 `Main.kt` 的 `demos` 對照表加上 `"my-demo" to { MyDemo() }`。
 3. 在章節 HTML 中加入：
 
