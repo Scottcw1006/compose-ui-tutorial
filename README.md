@@ -30,9 +30,11 @@ export JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"
 src/wasmJsMain/
 ├── kotlin/
 │   ├── Main.kt              # demo id → Composable 對照表，並掛載到網頁上
-│   └── demos/*.kt           # 每章的示範 Composable
+│   ├── demos/*.kt           # 每章的示範 Composable
+│   └── logic/*.kt           # 延伸閱讀「Coroutine 邏輯層實戰」的範例與共用的執行紀錄面板
 └── resources/
     ├── *.html               # 各章節頁面（說明文字寫在這裡）
+    ├── logic*.html          # 延伸閱讀的頁面（<body class="logic">，有自己的目錄與主色）
     ├── css/site.css
     └── js/site.js           # 側欄目錄、代碼片段載入、上下頁
 ```
@@ -65,6 +67,19 @@ src/wasmJsMain/
    `site.js` 會把 `.example` 展開成代碼區與手機框預覽。
 
 新增章節時，記得在 `js/site.js` 的 `CHAPTERS` 加上連結。
+
+### 延伸閱讀「Coroutine 邏輯層實戰」
+
+頁面是 `logic*.html`，目錄在 `js/site.js` 的 `LOGIC_CHAPTERS`。片段放在 `logic/`，寫法相同，但內容是純 Kotlin：函式多收一個 `log: (String) -> Unit`，用 `log("[名稱] 訊息")` 回報進度；畫面由 `ConsoleDemo`（選項 + Run + 執行紀錄）負責，例如：
+
+```kotlin
+@Composable
+fun MyLogicDemo() = ConsoleDemo(listOf("option A", "option B")) { option, log ->
+    myLogic(useB = option == 1, log)
+}
+```
+
+`ConsoleDemo` 在 `MacrotaskDispatcher` 上執行範例：每次恢復協程都是一個獨立的瀏覽器任務，`yield()`、計時器的行為才會和 Android 主執行緒一致。
 
 ## 注意事項
 

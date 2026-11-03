@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>測試協程 · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 7 章 · 品質</p>
+      <h1>測試協程</h1>
+      <p class="lead">協程的程式碼充滿 <code>delay</code>、逾時與平行執行。直接在測試裡跑，要嘛很慢，要嘛結果時好時壞。<code>kotlinx-coroutines-test</code> 用「虛擬時間」解決這兩個問題。這一章只有代碼，測試對象就是前面幾章的範例函式。</p>
+
+      <section class="lesson" id="run-test">
+        <h2>runTest 與虛擬時間</h2>
+        <span class="part-label">說明</span>
+        <p>把測試包在 <code>runTest { }</code> 裡，<code>delay</code> 就不會真的等待：排程器直接把虛擬時鐘撥到下一個該發生的時間點。所以第 1 章要跑 1.2 秒的 <code>loadDashboard</code>，在測試裡幾毫秒就結束，而 <code>currentTime</code> 仍然精確地顯示 1200。時間是確定的，平行執行的先後順序也就固定了，可以放心斷言。</p>
+        <div class="code-panel">
+          <div class="panel-head"><span>DashboardTest.kt</span><span class="panel-actions"><button class="copy-btn" type="button">複製</button></span></div>
+          <pre><code class="language-kotlin">// build.gradle.kts
+// testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:&lt;版本&gt;")
+
+class DashboardTest {
+    @Test
+    fun loadsUserAndFeedInParallel() = runTest {
+        val logs = mutableListOf&lt;String&gt;()
+        val screen = loadDashboard { logs += "$currentTime $it" }
+
+        assertEquals("user + feed", screen)
+        // 平行執行：ready 出現在 900ms（較慢的 feed），而不是 600 + 900
+        assertContains(logs, "900 [dashboard] ready: user + feed")
+        // coroutineScope 會等 analytics 結束才返回
+        assertEquals(1200, currentTime)
+    }
+
+    @Test
+    fun collectLatestOnlyRendersTheLastReading() = runTest {
+        val logs = mutableListOf&lt;String&gt;()
+        consume(Strategy.CollectLatest) { logs += it }
+
+        assertEquals(listOf("[ui] rendered 6"), logs.filter { "rendered" in it })
+        assertEquals(900, currentTime) // 6 × 100ms + 最後一筆的 300ms
+    }
+
+    @Test
+    fun supervisorScopeKeepsOtherDownloads() = runTest {
+        val logs = mutableListOf&lt;String&gt;()
+        downloadAll(supervised = true) { logs += it }
+
+        assertContains(logs, "[a.png] downloaded")
+        assertContains(logs, "[c.png] downloaded")
+        assertContains(logs, "[handler] b.png: HTTP 500")
+    }
+}</code></pre>
+        </div>
+        <p>需要在中途檢查狀態時，自己推動時鐘：</p>
+        <ul>
+          <li><code>advanceTimeBy(500)</code>：往前推 500ms，執行這段期間該發生的工作。</li>
+          <li><code>runCurrent()</code>：只執行「現在」這個時間點已經排好的工作。</li>
+          <li><code>advanceUntilIdle()</code>：一直執行到沒有任何待辦工作為止。</li>
+        </ul>
+      </section>
+
+      <section class="lesson" id="test-dispatchers">
+        <h2>注入 Dispatcher 與測試 ViewModel</h2>
+        <span class="part-label">說明</span>
+        <p>虛擬時間只管得到<strong>跑在測試排程器上</strong>的協程。程式裡寫死的 <code>Dispatchers.IO</code> 是真的執行緒，測試就失去控制，這就是<a href="logic-context.html#dispatchers">第 4 章</a>把 dispatcher 當成建構子參數的原因。ViewModel 用的 <code>Dispatchers.Main</code> 在單元測試裡不存在（沒有 Android Looper），要用 <code>Dispatchers.setMain</code> 換掉，通常包成一個 JUnit Rule：</p>
+        <div class="code-panel">
+          <div class="panel-head"><span>GalleryViewModelTest.kt</span><span class="panel-actions"><button class="copy-btn" type="button">複製</button></span></div>
+          <pre><code class="language-kotlin">class MainDispatcherRule(
+    val testDispatcher: TestDispatcher = UnconfinedTestDispatcher(),
+) : TestWatcher() {
+    override fun starting(description: Description) = Dispatchers.setMain(testDispatcher)
+    override fun finished(description: Description) = Dispatchers.resetMain()
+}
+
+class GalleryViewModelTest {
+    @get:Rule
+    val mainRule = MainDispatcherRule()
+
+    @Test
+    fun syncShowsProgressUntilDone() = runTest {
+        // 所有 dispatcher 共用 runTest 的排程器，才能用同一個虛擬時鐘控制
+        val testDispatcher = StandardTestDispatcher(testScheduler)
+        val repo = PhotoRepository(
+            api = FakePhotoApi(latencyMs = 1_000),
+            dao = FakePhotoDao(),
+            ioDispatcher = testDispatcher,
+            defaultDispatcher = testDispatcher,
+        )
+        val viewModel = GalleryViewModel(repo)
+
+        viewModel.onSyncClick()
+        assertTrue(viewModel.uiState.value.syncing) // Unconfined：launch 立刻執行到第一個暫停點
+
+        advanceTimeBy(999)
+        assertTrue(viewModel.uiState.value.syncing) // 假 API 還沒回應
+
+        advanceUntilIdle()
+        assertFalse(viewModel.uiState.value.syncing)
+    }
+}</code></pre>
+        </div>
+        <aside class="tip">
+          <p><strong>測試 stateIn 的 Flow：</strong><code>WhileSubscribed</code> 的 StateFlow 沒人收集時不會更新。在測試裡用 <code>backgroundScope.launch { viewModel.uiState.collect() }</code> 開一個收集者，它會在測試結束時自動取消，不會讓 <code>runTest</code> 一直等下去。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+</body>
+</html>

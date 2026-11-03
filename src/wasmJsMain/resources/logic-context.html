@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Context 與 Dispatcher · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 4 章 · 協程基礎</p>
+      <h1>CoroutineContext 與 Dispatcher</h1>
+      <p class="lead">每個協程都帶著一包設定：它屬於哪個 <code>Job</code>、在哪條執行緒上跑、叫什麼名字、例外交給誰。這包設定就是 <code>CoroutineContext</code>，其中決定執行緒的 Dispatcher 是 Android 開發最常碰到的部分。</p>
+
+      <section class="lesson" id="context">
+        <h2>CoroutineContext：協程帶著走的設定</h2>
+        <span class="part-label">說明</span>
+        <p><code>CoroutineContext</code> 像是一個以「型別」為 key 的 Map，常見的元素有 <code>Job</code>、<code>CoroutineDispatcher</code>、<code>CoroutineName</code>、<code>CoroutineExceptionHandler</code>。規則只有三條：</p>
+        <ul>
+          <li>用 <code>+</code> 組合，右邊的元素會蓋掉左邊同類的元素：<code>Dispatchers.Default + CoroutineName("sync")</code>。</li>
+          <li>子協程<strong>繼承</strong>父協程的 context，只有 <code>Job</code> 例外：它會拿到一個新的 Job，並掛在父 Job 底下，這就是第 2 章那棵樹的由來。</li>
+          <li><code>withContext(…)</code> 在區塊內換掉部分元素，區塊結束就換回原本的 context，並回傳區塊的結果。</li>
+        </ul>
+        <div class="example" data-id="logic-context" data-height="300" data-hint="試試看：按 Run，對照每一行的 name 是繼承、覆蓋還是換回來的"></div>
+        <aside class="tip">
+          <p><strong>CoroutineName 的實際用途：</strong>在 JVM 上開啟 debug 模式（<code>-Dkotlinx.coroutines.debug</code>）時，執行緒名稱會附上協程名稱，例如 <code>DefaultDispatcher-worker-1 @sync#3</code>，排查問題時很好用。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="dispatchers">
+        <h2>Dispatcher 與 main-safety</h2>
+        <span class="part-label">說明</span>
+        <p>Dispatcher 決定協程在哪條執行緒上恢復執行。Android 上常用三個：</p>
+        <table class="compare">
+          <tr><th>Dispatcher</th><th>執行緒</th><th>用途</th></tr>
+          <tr><td><code>Dispatchers.Main</code></td><td>主執行緒</td><td>更新 UI 狀態。<code>viewModelScope</code> 預設用 <code>Main.immediate</code>：已在主執行緒時不重新排隊，直接執行。</td></tr>
+          <tr><td><code>Dispatchers.IO</code></td><td>可以很多條（預設上限 64）</td><td>會阻塞的 I/O：檔案、<code>java.net</code>、同步版的 SDK。</td></tr>
+          <tr><td><code>Dispatchers.Default</code></td><td>與 CPU 核心數相同</td><td>吃 CPU 的運算：排序大量資料、解析 JSON、處理圖片。</td></tr>
+        </table>
+        <p>Android 官方的慣例是 <strong>main-safe</strong>：每個 suspend 函式都要能在主執行緒上直接呼叫。換句話說，<strong>做阻塞工作的那個函式</strong>自己負責 <code>withContext</code>，呼叫端不必、也不應該替它切換。Retrofit 與 Room 的 suspend 函式本身已經是 main-safe，直接呼叫即可。</p>
+        <div class="code-panel">
+          <div class="panel-head"><span>Android 專案中的寫法（本頁不執行）</span><span class="panel-actions"><button class="copy-btn" type="button">複製</button></span></div>
+          <pre><code class="language-kotlin">class PhotoRepository(
+    private val api: PhotoApi, // Retrofit
+    private val dao: PhotoDao, // Room
+    // 用參數注入，測試時才能換成測試用的 dispatcher（第 7 章）
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
+) {
+    suspend fun sync() {
+        val remote = api.fetchPhotos() // 已經 main-safe，不需要 withContext
+        val resized = withContext(defaultDispatcher) {
+            remote.map { it.resize(maxWidth = 1080) } // 吃 CPU → Default
+        }
+        dao.insertAll(resized)
+    }
+
+    suspend fun exportTo(file: File) = withContext(ioDispatcher) {
+        // 阻塞式 I/O → IO；呼叫端在主執行緒直接呼叫 exportTo() 也不會卡住
+        file.bufferedWriter().use { out ->
+            dao.getAll().forEach { out.appendLine(it.url) }
+        }
+    }
+}
+
+class GalleryViewModel(private val repo: PhotoRepository) : ViewModel() {
+    private val _uiState = MutableStateFlow(GalleryUiState())
+    val uiState = _uiState.asStateFlow()
+
+    fun onSyncClick() {
+        viewModelScope.launch { // 在主執行緒上執行
+            _uiState.update { it.copy(syncing = true) }
+            try {
+                repo.sync() // 直接呼叫，切換執行緒是 repository 的事
+            } catch (e: IOException) {
+                _uiState.update { it.copy(error = e.message) }
+            } finally {
+                _uiState.update { it.copy(syncing = false) }
+            }
+        }
+    }
+}</code></pre>
+        </div>
+        <aside class="warn">
+          <p><strong>為什麼這一節沒有即時範例：</strong>瀏覽器只有一條執行緒，Kotlin/Wasm 也沒有 <code>Dispatchers.IO</code>，切換執行緒的效果無法在這裡呈現。上一節的範例之所以能用 <code>Dispatchers.Default</code>，是因為在瀏覽器裡它其實也跑在同一條執行緒上。</p>
+        </aside>
+        <aside class="tip">
+          <p><strong>限制同時執行的數量：</strong><code>Dispatchers.IO.limitedParallelism(4)</code> 會得到一個最多同時用 4 條執行緒的 view，適合保護一次只能承受少量連線的資源；<code>limitedParallelism(1)</code> 則保證同一時間只有一個協程在執行，是保護共享狀態的另一種做法（見<a href="logic-concurrency.html#mutex">第 6 章</a>）。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

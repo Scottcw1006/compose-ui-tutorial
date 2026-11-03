@@ -2,6 +2,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.ExperimentalComposeUiApi
@@ -52,6 +53,18 @@ import demos.TextFieldDemo
 import demos.TransitionDemo
 import demos.WeightDemo
 import kotlinx.browser.document
+import logic.BackpressureDemo
+import logic.BuildersDemo
+import logic.CancelDemo
+import logic.ChannelDemo
+import logic.CombineDemo
+import logic.ContextDemo
+import logic.HotFlowDemo
+import logic.JobTreeDemo
+import logic.MutexDemo
+import logic.PropagationDemo
+import logic.SupervisorDemo
+import logic.SuspendDemo
 import org.w3c.dom.HTMLElement
 
 // 網頁上 data-demo="<id>" 對應到的 Composable
@@ -100,11 +113,26 @@ private val demos: Map<String, @Composable () -> Unit> = mapOf(
     "fx-shimmer" to { ShimmerDemo() },
     "fx-spotlight" to { SpotlightDemo() },
     "fx-blur" to { BlurDemo() },
+    // 延伸閱讀：Coroutine 邏輯層實戰
+    "logic-suspend" to { SuspendDemo() },
+    "logic-builders" to { BuildersDemo() },
+    "logic-job-tree" to { JobTreeDemo() },
+    "logic-cancel" to { CancelDemo() },
+    "logic-propagation" to { PropagationDemo() },
+    "logic-supervisor" to { SupervisorDemo() },
+    "logic-context" to { ContextDemo() },
+    "logic-backpressure" to { BackpressureDemo() },
+    "logic-combine" to { CombineDemo() },
+    "logic-hot-flow" to { HotFlowDemo() },
+    "logic-channel" to { ChannelDemo() },
+    "logic-mutex" to { MutexDemo() },
 )
 
 @Composable
 private fun DemoHost(id: String) {
-    MaterialTheme(colorScheme = lightColorScheme()) {
+    // 邏輯層的範例是深色的執行紀錄面板
+    val colors = if (id.startsWith("logic-")) darkColorScheme() else lightColorScheme()
+    MaterialTheme(colorScheme = colors) {
         Surface(Modifier.fillMaxSize()) {
             val demo = demos[id]
             if (demo != null) demo() else Text("Unknown demo: $id")

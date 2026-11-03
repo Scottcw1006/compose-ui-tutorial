@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Flow 進階與熱流 · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 5 章 · 資料流與協作</p>
+      <h1>Flow 進階與熱流</h1>
+      <p class="lead"><a href="coroutines.html#flow">Compose UI 教學第 5 章</a>示範了怎麼在畫面上收集 Flow。這一章看 Flow 本身：生產與消費速度不一致時怎麼辦、多條 Flow 怎麼合併，以及 Repository 與 ViewModel 最常用的 <code>StateFlow</code>。</p>
+
+      <section class="lesson" id="backpressure">
+        <h2>背壓：生產比消費快的時候</h2>
+        <span class="part-label">說明</span>
+        <p>Flow 預設是<strong>循序</strong>的：<code>emit()</code> 會等收集端處理完這一筆才返回。所以感測器每 100ms 一筆、畫面處理一筆要 300ms 時，生產端會被拖慢到和消費端一樣，這就是 Flow 內建的背壓。如果這不是你要的，有三種調整方式：</p>
+        <table class="compare">
+          <tr><th>寫法</th><th>行為</th><th>適合</th></tr>
+          <tr><td><code>collect</code>（預設）</td><td>生產端等消費端，一筆都不丟</td><td>每一筆都重要，而且順序執行沒問題</td></tr>
+          <tr><td><code>buffer()</code></td><td>生產端在另一個協程繼續跑，資料先排隊，一筆都不丟</td><td>生產與消費都花時間，想讓兩邊同時進行</td></tr>
+          <tr><td><code>conflate()</code></td><td>消費端忙的時候只保留最新一筆，中間的直接丟掉</td><td>只在乎最新狀態，例如位置、進度</td></tr>
+          <tr><td><code>collectLatest</code></td><td>新資料來時，<strong>取消</strong>還沒處理完的那一筆，改處理新的</td><td>舊結果已經沒用，例如搜尋、重新整理</td></tr>
+        </table>
+        <div class="example" data-id="logic-backpressure" data-height="420" data-hint="試試看：四個選項各跑一次，比較總時間與 rendered 了哪幾筆"></div>
+      </section>
+
+      <section class="lesson" id="combine">
+        <h2>combine 與 zip：合併多條 Flow</h2>
+        <span class="part-label">說明</span>
+        <p>畫面狀態常常來自好幾個來源，例如使用者資料、設定、網路狀態。兩個常見的合併方式：</p>
+        <ul>
+          <li><code>combine</code>：任一邊有新值，就拿<strong>雙方的最新值</strong>重算一次（兩邊都至少要有一個值才開始）。ViewModel 組合 UI 狀態幾乎都用它。</li>
+          <li><code>zip</code>：一對一配對，第 1 筆配第 1 筆、第 2 筆配第 2 筆；快的那邊要等慢的，較短的那條結束時整個結束。</li>
+        </ul>
+        <p>範例的報價每 300ms 一筆、匯率每 700ms 一筆。<code>combine</code> 在匯率還沒更新時，會用舊匯率搭配新報價；<code>zip</code> 一次只向兩邊各要一筆，所以報價被匯率拖慢（p2 要等到約 1000ms 才產生）；配完兩對後匯率結束，zip 也跟著結束，p3 之後根本沒有產生。</p>
+        <div class="example" data-id="logic-combine" data-height="360" data-hint="試試看：切換 combine 與 zip，數一數 [quote] 有幾筆"></div>
+        <aside class="tip">
+          <p><strong>flatMapLatest：</strong>如果是「依照 A 的值，切換去收集另一條 Flow」，例如依搜尋字串查詢、依選中的帳號讀資料，用 <code>queryFlow.flatMapLatest { q -&gt; repo.search(q) }</code>。新的值一到就取消上一條，和 <code>collectLatest</code> 是同一個概念。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="hot-flows">
+        <h2>熱流：StateFlow 與 stateIn</h2>
+        <span class="part-label">說明</span>
+        <p>用 <code>flow { }</code> 建立的是<strong>冷流</strong>：沒人收集就不執行，每個收集者各自執行一份。兩個畫面同時收集，就會連兩次 WebSocket。<strong>熱流</strong>則獨立於收集者存在，所有人共用同一份資料：</p>
+        <ul>
+          <li><code>StateFlow</code>：永遠有一個目前值，新的收集者立刻拿到它；相同的值不會重複送出。用來表示「狀態」。</li>
+          <li><code>SharedFlow</code>：可以設定重播幾筆（<code>replay</code>），沒有「目前值」的概念。用來廣播「事件」。</li>
+        </ul>
+        <p><code>stateIn</code> / <code>shareIn</code> 把冷流變成熱流，<code>started</code> 參數決定上游什麼時候開始與停止：</p>
+        <ul>
+          <li><code>Eagerly</code>：立刻開始，永不停止。</li>
+          <li><code>Lazily</code>：第一個收集者出現時開始，之後永不停止。</li>
+          <li><code>WhileSubscribed(5000)</code>：有收集者時執行，最後一個離開後再等 5 秒才停止。Android 官方建議的預設值，那 5 秒剛好讓畫面旋轉時不必重新連線。範例為了好觀察改成 2 秒。</li>
+        </ul>
+        <div class="example" data-id="logic-hot-flow" data-height="380" data-hint="試試看：加兩個 collector（只會 connect 一次），全部移除後等 2 秒，或在 2 秒內再加回來"></div>
+        <aside class="tip">
+          <p><strong>一次性事件：</strong>導頁、Snackbar 這類「只該處理一次」的事件，不要放進 <code>StateFlow</code>（畫面重建時會再收到一次）。可以用 <code>Channel(Channel.BUFFERED)</code> 搭配 <code>receiveAsFlow()</code>，或者照 Android 官方目前的建議，把它也建模成狀態，處理完再由 UI 回報清除。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

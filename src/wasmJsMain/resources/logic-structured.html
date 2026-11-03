@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>結構化並行與取消 · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 2 章 · 協程基礎</p>
+      <h1>結構化並行與取消</h1>
+      <p class="lead">用 <code>Thread</code> 或 <code>Executor</code> 開出去的工作，誰負責停掉它、什麼時候停，全靠你記得。協程把每個工作放進一棵 <code>Job</code> 樹裡：生命週期跟著父節點走，取消也沿著樹往下傳。</p>
+
+      <section class="lesson" id="job-tree">
+        <h2>Job 階層：父子關係</h2>
+        <span class="part-label">說明</span>
+        <p>每個協程都有一個 <code>Job</code>。在協程裡再 <code>launch</code>，新的協程就是它的<strong>子協程</strong>。這棵樹有四條規則：</p>
+        <ul>
+          <li><strong>父等子：</strong>父協程自己的程式碼跑完後，還要等所有子協程結束才算完成。</li>
+          <li><strong>取消往下傳：</strong>取消父協程，它底下的所有子孫都會被取消。</li>
+          <li><strong>取消不往上傳：</strong>子協程被取消（<code>CancellationException</code>）是正常結束的一種，不影響父協程與兄弟。</li>
+          <li><strong>失敗往上傳：</strong>子協程因為其他例外而失敗，會讓父協程也失敗，詳見<a href="logic-exceptions.html">第 3 章</a>。</li>
+        </ul>
+        <p>Android 上的 <code>viewModelScope</code> 就是一棵樹的根：<code>onCleared()</code> 時它被取消，從它開出去的所有工作一起停止，這就是不會洩漏的原因。</p>
+        <div class="example" data-id="logic-job-tree" data-height="380" data-hint="試試看：取消 Child 1，看 Parent 是否繼續等 Child 2；再重來一次改取消 Parent"></div>
+      </section>
+
+      <section class="lesson" id="cancellation">
+        <h2>取消是合作式的</h2>
+        <span class="part-label">說明</span>
+        <p><code>job.cancel()</code> 只是把 Job 標記為「已取消」。協程要執行到<strong>取消點</strong>才會真的停下來，也就是在那裡丟出 <code>CancellationException</code>。kotlinx.coroutines 裡的 suspend 函式（<code>delay</code>、<code>withContext</code>、<code>await</code>、Channel 的收送）都是取消點；一段完全不暫停的 CPU 運算則不是。</p>
+        <p>範例的 worker 分 8 塊做運算，每塊約 150ms，caller 在 400ms 時取消它：</p>
+        <ul>
+          <li><strong>no check</strong>：worker 一路跑完 8 塊。更慘的是，在單執行緒的瀏覽器裡，caller 的 <code>delay(400)</code> 要等 worker 讓出執行緒才能結束，所以 <code>cancel()</code> 晚到 1200ms 才被呼叫，這時已經沒東西可取消了。在 Android 的 <code>Dispatchers.Default</code> 上，<code>cancel()</code> 會準時在 400ms 呼叫，但結果一樣：迴圈照跑到底。</li>
+          <li><strong>yield()</strong>：每一塊開始前先 <code>yield()</code>，讓出執行緒、也檢查是否被取消。caller 因此很快就能呼叫 <code>cancel()</code>，worker 在下一個 <code>yield()</code> 停下，剩下的幾塊都不做了，<code>finally</code> 照常執行。</li>
+        </ul>
+        <div class="example" data-id="logic-cancel" data-height="380" data-hint="試試看：兩個選項各跑一次，注意 cancel() 的時間戳"></div>
+        <p>三種讓 CPU 迴圈可以被取消的寫法：</p>
+        <ul>
+          <li><code>yield()</code>：檢查取消，並讓同一條執行緒上的其他協程有機會執行。單執行緒（主執行緒、瀏覽器）上要用這個。</li>
+          <li><code>ensureActive()</code>：只檢查、被取消就丟例外，不讓出執行緒，比較便宜。在 <code>Dispatchers.Default</code> 這種多執行緒環境足夠了。</li>
+          <li><code>while (isActive) { … }</code>：不丟例外，迴圈自然結束，適合需要自己收尾的情況。</li>
+        </ul>
+        <aside class="warn">
+          <p><strong>別把取消吞掉：</strong><code>catch (e: Exception)</code> 與 <code>runCatching { }</code> 都會抓到 <code>CancellationException</code>。抓到後沒有重新丟出，協程就會「忘記」自己被取消，繼續往下執行。要嘛只抓具體的例外型別，要嘛先 <code>if (e is CancellationException) throw e</code>。</p>
+        </aside>
+        <aside class="tip">
+          <p><strong>finally 裡的 suspend 呼叫：</strong>已取消的協程再呼叫 suspend 函式會立刻丟出 <code>CancellationException</code>。如果收尾一定要暫停（例如把進度寫進資料庫），包在 <code>withContext(NonCancellable) { }</code> 裡。</p>
+          <p><strong>逾時也是取消：</strong><code>withTimeout(3000) { }</code> 超時會取消區塊並丟出 <code>TimeoutCancellationException</code>；<code>withTimeoutOrNull</code> 則回傳 <code>null</code>，通常比較好處理。兩者一樣需要區塊內的程式碼配合取消。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

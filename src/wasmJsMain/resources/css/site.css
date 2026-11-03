@@ -34,6 +34,21 @@
   }
 }
 
+/* 延伸閱讀「Coroutine 邏輯層實戰」使用另一組主色，讓讀者知道自己換到了另一個單元 */
+body.logic {
+  --accent: #006a6a;
+  --accent-soft: #c4ecea;
+  --tip-bg: #e8f4f3;
+}
+@media (prefers-color-scheme: dark) {
+  body.logic {
+    --accent: #80d5d4;
+    --accent-soft: #12393a;
+    --tip-bg: #15292a;
+  }
+}
+body.logic .topbar .brand .logo { background: linear-gradient(135deg, #006a6a, #3a6ea5); }
+
 * { box-sizing: border-box; }
 
 html { scroll-padding-top: 72px; }
@@ -137,6 +152,17 @@ code { font-family: var(--mono); font-size: 0.9em; }
 #sidebar a:hover { background: var(--bg-soft); }
 #sidebar a.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
 #sidebar .soon { color: var(--text-soft); opacity: 0.7; }
+#sidebar .site-switch {
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+}
+#sidebar .site-switch a {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 500;
+}
+#sidebar .site-switch a:hover { border-color: var(--accent); }
 #sidebar .badge {
   font-size: 11px;
   border: 1px solid var(--border);
@@ -289,6 +315,9 @@ table.compare th { background: var(--bg-soft); }
   background: #fffbfe;
 }
 .device .demo { width: 100%; }
+.device.console { border-radius: 14px; padding: 6px; }
+.device.console .screen, .device.console .loading { border-radius: 10px; background: #1e1d24; }
+.device.console .loading { color: #8f8a99; }
 .device .loading {
   position: absolute;
   inset: 0;

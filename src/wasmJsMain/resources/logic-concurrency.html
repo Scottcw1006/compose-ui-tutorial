@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Channel 與 Mutex · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 6 章 · 資料流與協作</p>
+      <h1>Channel 與 Mutex</h1>
+      <p class="lead">多個協程一起工作時，有兩件事要處理：怎麼把資料從一個協程交給另一個，以及怎麼避免它們同時改寫同一份狀態。對應到 Java 的工具，大概是 <code>BlockingQueue</code> 與 <code>synchronized</code>，只是協程版本用「暫停」取代「阻塞」。</p>
+
+      <section class="lesson" id="channel">
+        <h2>Channel：協程之間的佇列</h2>
+        <span class="part-label">說明</span>
+        <p><code>Channel</code> 就是可以暫停的 <code>BlockingQueue</code>：<code>send</code> 在佇列滿時暫停，<code>receive</code> 在佇列空時暫停。和 Flow 最大的差別是：<strong>每個元素只會被一個接收者取走</strong>。多個 worker 從同一個 Channel 取工作，就是天然的負載分配（fan-out）。</p>
+        <p>容量決定了生產端什麼時候要等：</p>
+        <ul>
+          <li><code>RENDEZVOUS</code>（0，預設）：沒有緩衝，<code>send</code> 要等到有人 <code>receive</code> 才返回，雙方「碰面」交接。</li>
+          <li>指定數字、<code>BUFFERED</code>（64）、<code>UNLIMITED</code>：先放進緩衝區，滿了才等。</li>
+          <li><code>CONFLATED</code>：只保留最新一筆，<code>send</code> 永遠不用等。</li>
+        </ul>
+        <p>範例的生產端送出 6 筆訂單，兩個 worker 各花 600ms 包裝一筆。沒有緩衝時，生產端每次都要等 worker 有空；容量 4 時，它一口氣送完、提早 <code>close()</code> 去做別的事，worker 再慢慢消化。</p>
+        <div class="example" data-id="logic-channel" data-height="400" data-hint="試試看：比較兩個選項中 [producer] closed 出現的時間"></div>
+        <aside class="tip">
+          <p><strong>大多數時候用 Flow 就好：</strong>單純的資料串流用 Flow，它是冷的、會自動清理。Channel 適合「協程之間交接工作」的場景，例如工作佇列、把 callback 事件交給處理迴圈。用 <code>produce { }</code> 建構器建立的 Channel 會在協程結束時自動關閉。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="mutex">
+        <h2>Mutex：保護共享的可變狀態</h2>
+        <span class="part-label">說明</span>
+        <p>就算只有一條執行緒，協程之間還是會有競爭：只要「讀取」與「寫回」之間有暫停點，暫停的期間其他協程就可能讀到同一個舊值。範例開 100 個協程，每個賣出 1 張票：</p>
+        <ul>
+          <li><strong>no lock</strong>：100 個協程都讀到 <code>sold = 0</code>，暫停後各自寫回 1，最後只賣出 1 張。</li>
+          <li><strong>Mutex</strong>：<code>withLock</code> 讓「讀取到寫回」變成一個整體，最後是 100 張，代價是它們必須排隊，總時間變長。</li>
+        </ul>
+        <div class="example" data-id="logic-mutex" data-height="260" data-hint="試試看：兩個選項各跑一次，比較 sold 的數字與花費的時間"></div>
+        <p>和 <code>synchronized</code> 的差別：<code>synchronized</code> 會阻塞執行緒，區塊裡也不能呼叫 suspend 函式；<code>Mutex</code> 等鎖時只是暫停。另外 <code>Mutex</code> <strong>不可重入</strong>：已經拿著鎖的協程再呼叫一次 <code>withLock</code> 會永遠卡住。</p>
+        <aside class="tip">
+          <p><strong>在 Android 的多執行緒環境：</strong>即使中間沒有暫停點，兩條執行緒同時執行 <code>count++</code> 也會出錯。依情況選擇：</p>
+          <ul>
+            <li>狀態放在 <code>MutableStateFlow</code>，用 <code>update { it + 1 }</code>，它是原子操作，ViewModel 最常用。</li>
+            <li>單一數值用 <code>AtomicInteger</code> 這類原子類別。</li>
+            <li>把所有修改都限制在同一條執行緒上，例如 <code>Dispatchers.Default.limitedParallelism(1)</code>。</li>
+            <li>需要在臨界區內暫停時，才用 <code>Mutex</code>。</li>
+          </ul>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <div class="hero">
+        <p class="chapter-label">延伸閱讀 · 給 Android 開發者</p>
+        <h1>Coroutine 邏輯層實戰</h1>
+        <p class="lead">Compose UI 教學的<a href="coroutines.html">第 5 章</a>講的是協程怎麼和畫面接起來。這個單元離開 UI，專心在 Repository、UseCase、ViewModel 這一層：協程怎麼暫停、怎麼取消、例外往哪裡跑、資料流怎麼合併與共享，以及怎麼測試。</p>
+      </div>
+
+      <h2>範例怎麼看</h2>
+      <ul>
+        <li><strong>代碼</strong>：純 Kotlin，沒有任何 <code>@Composable</code>。函式都多收一個 <code>log: (String) -&gt; Unit</code> 參數，用來回報發生了什麼；複製到單元測試或 <code>main()</code> 裡，傳 <code>::println</code> 就能直接執行。</li>
+        <li><strong>執行結果</strong>：右側的深色面板會真的執行同一段代碼。選好情境後按 <strong>Run</strong>，每一行紀錄前面是從開始算起的毫秒數，<code>[名稱]</code> 依協程上色，方便看出誰在什麼時候做了什麼。</li>
+      </ul>
+
+      <aside class="warn">
+        <p><strong>瀏覽器是單執行緒的：</strong>範例跑在 WebAssembly 上，所有協程共用同一條執行緒，沒有 <code>Dispatchers.IO</code>，也看不到真正的多執行緒競爭。這反而讓「暫停」與「阻塞」的差別特別明顯。和 Android 行為不同的地方，各節都會特別說明。</p>
+      </aside>
+
+      <h2>學習路線</h2>
+      <div class="roadmap">
+        <a href="logic-basics.html"><span class="num">01 · 協程基礎</span><h3>suspend 與建構器</h3><p>暫停而不阻塞；launch、async、coroutineScope。</p></a>
+        <a href="logic-structured.html"><span class="num">02 · 協程基礎</span><h3>結構化並行與取消</h3><p>Job 階層、合作式取消、finally 與逾時。</p></a>
+        <a href="logic-exceptions.html"><span class="num">03 · 協程基礎</span><h3>例外處理</h3><p>例外怎麼傳遞、supervisorScope、CoroutineExceptionHandler。</p></a>
+        <a href="logic-context.html"><span class="num">04 · 協程基礎</span><h3>Context 與 Dispatcher</h3><p>CoroutineContext 的繼承，與 main-safe 的慣例。</p></a>
+        <a href="logic-flow.html"><span class="num">05 · 資料流與協作</span><h3>Flow 進階與熱流</h3><p>背壓、combine / zip、StateFlow 與 stateIn。</p></a>
+        <a href="logic-concurrency.html"><span class="num">06 · 資料流與協作</span><h3>Channel 與 Mutex</h3><p>生產者與消費者、保護共享狀態。</p></a>
+        <a href="logic-testing.html"><span class="num">07 · 品質</span><h3>測試協程</h3><p>runTest、虛擬時間與測試用 Dispatcher。</p></a>
+      </div>
+
+      <aside class="tip">
+        <p><strong>前置知識：</strong>你寫過 <code>viewModelScope.launch { }</code>、用過 suspend 函式就足夠了。想看協程與 Compose 畫面的整合（<code>LaunchedEffect</code>、<code>collectAsState</code>），請回到 <a href="coroutines.html">Compose UI 教學第 5 章</a>。</p>
+      </aside>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="js/site.js"></script>
+</body>
+</html>

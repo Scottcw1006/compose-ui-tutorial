@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>suspend 與建構器 · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 1 章 · 協程基礎</p>
+      <h1>suspend 與協程建構器</h1>
+      <p class="lead">協程最常被形容成「輕量的執行緒」，但更準確的說法是：<strong>可以暫停、之後再從原處繼續的函式</strong>。這一章先看「暫停」到底是什麼，再看啟動協程的三個建構器。</p>
+
+      <section class="lesson" id="suspend">
+        <h2>suspend：暫停而不阻塞</h2>
+        <span class="part-label">說明</span>
+        <p><code>suspend</code> 函式可以在<strong>暫停點</strong>（呼叫另一個 suspend 函式的地方，例如 <code>delay</code>）停下來，把執行緒還回去；等條件滿足後，再從停下來的地方繼續。編譯器會把它改寫成一個狀態機，並多傳一個 <code>Continuation</code> 參數，概念上就是「幫你寫好的 callback」。</p>
+        <p>對照你熟悉的 <code>Thread.sleep()</code>：sleep 期間執行緒什麼都不能做；在主執行緒上，這就是卡頓與 ANR。範例讓 A、B 兩個協程在<strong>同一條執行緒</strong>上各做三步：</p>
+        <ul>
+          <li><strong>suspend</strong>：A、B 交錯執行，總共約 900ms（和只跑一個一樣久）。<code>delay</code> 的 300ms 裡，執行緒去跑另一個協程了。</li>
+          <li><strong>blocking</strong>：A 做完三步 B 才開始，總共約 1800ms，而且這段期間整個頁面都卡住，連 Run 按鈕都按不動。</li>
+        </ul>
+        <div class="example" data-id="logic-suspend" data-height="360" data-hint="試試看：兩個選項各跑一次，比較時間戳"></div>
+        <aside class="warn">
+          <p><strong>suspend 不會自動換執行緒：</strong>在 suspend 函式裡呼叫阻塞式的程式（檔案 I/O、舊版 SDK 的同步 API），一樣會卡住當下的執行緒。要把它移到別的執行緒，得自己用 <code>withContext(Dispatchers.IO)</code>，見<a href="logic-context.html#dispatchers">第 4 章</a>。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="builders">
+        <h2>launch、async 與 coroutineScope</h2>
+        <span class="part-label">說明</span>
+        <p>suspend 函式只能從另一個 suspend 函式或協程裡呼叫，而協程要由<strong>建構器</strong>啟動：</p>
+        <table class="compare">
+          <tr><th>建構器</th><th>回傳</th><th>用途</th></tr>
+          <tr><td><code>launch</code></td><td><code>Job</code></td><td>不需要結果的工作：寫入、送出、更新狀態。</td></tr>
+          <tr><td><code>async</code></td><td><code>Deferred&lt;T&gt;</code></td><td>需要結果的工作，之後用 <code>await()</code> 取值；多個 <code>async</code> 會同時進行。</td></tr>
+          <tr><td><code>coroutineScope</code></td><td>區塊的結果</td><td>本身是 suspend 函式：在裡面開子協程，<strong>等全部結束</strong>才返回，任一個失敗就整組取消。</td></tr>
+          <tr><td><code>runBlocking</code></td><td>區塊的結果</td><td>阻塞當下的執行緒直到完成，只用在 <code>main()</code> 或舊式測試；Android 主執行緒上絕對不要用，瀏覽器上也不存在。</td></tr>
+        </table>
+        <p>範例的 <code>loadDashboard</code> 同時抓 user（600ms）與 feed（900ms），另外 <code>launch</code> 一個送出統計的工作（1200ms）。注意看兩個時間點：</p>
+        <ul>
+          <li><code>[dashboard] ready</code> 出現在約 900ms：兩個 <code>await()</code> 都拿到結果了。</li>
+          <li><code>[caller] returned</code> 卻出現在約 1200ms：<code>coroutineScope</code> 會等「所有」子協程結束，包括沒人 await 的 analytics。</li>
+        </ul>
+        <div class="example" data-id="logic-builders" data-height="340" data-hint="試試看：按 Run，比較 ready 與 returned 的時間"></div>
+        <aside class="tip">
+          <p><strong>這正是結構化並行的保證：</strong>函式返回時，它啟動的工作一定都結束了，不會在背景偷偷繼續跑。如果真的需要「呼叫端不等、而且比畫面活得更久」的工作，就把它 <code>launch</code> 在一個生命週期更長、由你明確注入的 scope（例如 application scope）裡，而不是用 <code>GlobalScope</code>。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>

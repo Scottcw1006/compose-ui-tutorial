@@ -30,25 +30,63 @@ const CHAPTERS = [
   },
 ];
 
+// 延伸閱讀「Coroutine 邏輯層實戰」是獨立的一組頁面（<body class="logic">），有自己的目錄
+const LOGIC_CHAPTERS = [
+  {
+    group: "入門",
+    items: [{ href: "logic.html", title: "開始之前" }],
+  },
+  {
+    group: "協程基礎",
+    items: [
+      { href: "logic-basics.html", title: "suspend 與建構器" },
+      { href: "logic-structured.html", title: "結構化並行與取消" },
+      { href: "logic-exceptions.html", title: "例外處理" },
+      { href: "logic-context.html", title: "Context 與 Dispatcher" },
+    ],
+  },
+  {
+    group: "資料流與協作",
+    items: [
+      { href: "logic-flow.html", title: "Flow 進階與熱流" },
+      { href: "logic-concurrency.html", title: "Channel 與 Mutex" },
+    ],
+  },
+  {
+    group: "品質",
+    items: [{ href: "logic-testing.html", title: "測試協程" }],
+  },
+];
+
+const IS_LOGIC = document.body.classList.contains("logic");
+const NAV = IS_LOGIC ? LOGIC_CHAPTERS : CHAPTERS;
 const currentPage = location.pathname.split("/").pop() || "index.html";
+
+// 側欄最下方：切換到另一組頁面
+const SITE_SWITCH = IS_LOGIC
+  ? `<div class="group site-switch"><a href="index.html">← 回到 Compose UI 教學</a></div>`
+  : `<div class="group site-switch">
+      <p class="group-title">延伸閱讀</p>
+      <a href="logic.html"><span>Coroutine 邏輯層實戰</span><span>→</span></a>
+    </div>`;
 
 function renderSidebar() {
   const nav = document.getElementById("sidebar");
   if (!nav) return;
-  nav.innerHTML = CHAPTERS.map((g) => `
+  nav.innerHTML = NAV.map((g) => `
     <div class="group">
       <p class="group-title">${g.group}</p>
       ${g.items.map((it) => it.soon
         ? `<span class="soon">${it.title}<span class="badge">即將推出</span></span>`
         : `<a href="${it.href}" class="${it.href === currentPage ? "active" : ""}">${it.title}</a>`
       ).join("")}
-    </div>`).join("");
+    </div>`).join("") + SITE_SWITCH;
 }
 
 function renderPager() {
   const pager = document.querySelector(".pager");
   if (!pager) return;
-  const pages = CHAPTERS.flatMap((g) => g.items).filter((it) => !it.soon);
+  const pages = NAV.flatMap((g) => g.items).filter((it) => !it.soon);
   const i = pages.findIndex((p) => p.href === currentPage);
   const prev = pages[i - 1];
   const next = pages[i + 1];
@@ -73,11 +111,11 @@ function renderExamples() {
         </div>
       </div>
       <div class="preview-panel">
-        <span class="part-label">實際呈現</span>
-        <div class="device">
+        <span class="part-label">${IS_LOGIC ? "執行結果" : "實際呈現"}</span>
+        <div class="device${IS_LOGIC ? " console" : ""}">
           <div class="screen">
             <div class="demo" data-demo="${id}" style="height:${height}px"></div>
-            <div class="loading">Compose 載入中…</div>
+            <div class="loading">${IS_LOGIC ? "範例載入中…" : "Compose 載入中…"}</div>
           </div>
         </div>
         ${hint}

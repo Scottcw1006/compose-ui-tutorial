@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>例外處理 · Coroutine 邏輯層實戰</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Noto+Sans+TC:wght@400;500;700&display=swap">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+  <link rel="stylesheet" href="css/site.css">
+</head>
+<body class="logic">
+  <header class="topbar">
+    <button class="menu-btn" type="button">☰ 目錄</button>
+    <a class="brand" href="logic.html"><span class="logo">K</span>Coroutine 邏輯層實戰</a>
+  </header>
+  <div class="layout">
+    <nav id="sidebar"></nav>
+    <main class="content">
+      <p class="chapter-label">第 3 章 · 協程基礎</p>
+      <h1>例外處理</h1>
+      <p class="lead">同步程式碼的例外沿著呼叫堆疊往上丟；協程的例外則沿著 <code>Job</code> 樹往上傳，而且會順手取消兄弟協程。搞懂這條路徑，才知道 <code>try/catch</code> 該放在哪裡。</p>
+
+      <section class="lesson" id="propagation">
+        <h2>例外如何沿著 Job 階層傳遞</h2>
+        <span class="part-label">說明</span>
+        <p>子協程因為一般例外（不是 <code>CancellationException</code>）失敗時，會依序發生：</p>
+        <ol>
+          <li>子協程失敗，通知父協程。</li>
+          <li>父協程跟著失敗，並<strong>取消其他所有子協程</strong>。</li>
+          <li>例外繼續往上：<code>coroutineScope</code> 會把它重新丟給呼叫端；如果已經到了樹根，就交給 <code>CoroutineExceptionHandler</code>，沒有設定的話，在 Android 上就是 App 閃退。</li>
+        </ol>
+        <p>範例中，價格 API 在 500ms 失敗，正在載入的評論跟著被取消。切到 <strong>async</strong> 看一個常見的誤解：在 <code>await()</code> 外面包 <code>try/catch</code>，確實抓得到例外，但 <code>async</code> 失敗的當下就已經通知父協程了，評論一樣被取消，呼叫端一樣收到例外。</p>
+        <div class="example" data-id="logic-propagation" data-height="360" data-hint="試試看：兩個選項各跑一次，看 reviews 是否都被取消"></div>
+        <aside class="tip">
+          <p><strong>try/catch 放哪裡：</strong>不希望失敗影響別人，就在<strong>會失敗的那個協程裡面</strong>處理，例如 <code>async { try { api.price() } catch (e: IOException) { null } }</code>；或者改用下一節的 <code>supervisorScope</code>。包在 <code>launch { }</code> 外面的 <code>try/catch</code> 則完全沒用：<code>launch</code> 立刻返回，例外是之後在另一個協程裡發生的。</p>
+        </aside>
+      </section>
+
+      <section class="lesson" id="supervisor">
+        <h2>supervisorScope 與 CoroutineExceptionHandler</h2>
+        <span class="part-label">說明</span>
+        <p><code>supervisorScope</code>（以及 <code>SupervisorJob</code>）改變了第 2 步：子協程失敗<strong>不會</strong>讓父協程失敗，也不會取消兄弟。代價是每個子協程要自己負責自己的例外：</p>
+        <ul>
+          <li><code>launch</code> 的例外沒人接手，會交給 <code>CoroutineExceptionHandler</code>。</li>
+          <li><code>async</code> 的例外會保留在 <code>Deferred</code> 裡，等你 <code>await()</code> 時才丟出。</li>
+        </ul>
+        <p>範例同時下載三張圖，b.png 在 500ms 失敗：</p>
+        <ul>
+          <li><strong>coroutineScope</strong>：a.png 與 c.png 被取消，例外丟給呼叫端；傳給 <code>launch</code> 的 handler 完全沒有被呼叫，因為例外有父協程接手。</li>
+          <li><strong>supervisorScope</strong>：a.png、c.png 照常完成，b.png 的例外交給 handler，呼叫端看到的是正常結束。</li>
+        </ul>
+        <div class="example" data-id="logic-supervisor" data-height="340" data-hint="試試看：切換兩種 scope，注意 [handler] 那一行"></div>
+        <table class="compare">
+          <tr><th></th><th><code>coroutineScope</code> / <code>Job()</code></th><th><code>supervisorScope</code> / <code>SupervisorJob()</code></th></tr>
+          <tr><td>一個子協程失敗</td><td>取消父協程與所有兄弟</td><td>只有它自己結束</td></tr>
+          <tr><td>適合</td><td>彼此依賴、缺一不可的工作（同一個畫面的資料）</td><td>彼此獨立的工作（多個下載、多個事件處理）</td></tr>
+          <tr><td>Android 例子</td><td>在 suspend 函式裡平行載入</td><td><code>viewModelScope</code>、<code>lifecycleScope</code></td></tr>
+        </table>
+        <aside class="warn">
+          <p><strong>viewModelScope 也會閃退：</strong>它底層是 <code>SupervisorJob</code>，一個 <code>launch</code> 失敗不會取消其他工作，但沒被處理的例外仍然會一路丟到執行緒的 uncaught exception handler，讓 App 閃退。ViewModel 裡的 <code>launch</code> 要自己 <code>try/catch</code>，把失敗轉成 UI 狀態。</p>
+          <p><strong>handler 只在兩個地方有效：</strong>樹根的協程（例如 <code>scope.launch(handler)</code>），或 supervisor 的直接子協程。裝在一般子協程上會被忽略，就像範例的 coroutineScope 選項。</p>
+        </aside>
+      </section>
+
+      <nav class="pager"></nav>
+    </main>
+    <aside id="toc"></aside>
+  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/languages/kotlin.min.js"></script>
+  <script src="js/site.js"></script>
+  <script src="composeApp.js"></script>
+</body>
+</html>
