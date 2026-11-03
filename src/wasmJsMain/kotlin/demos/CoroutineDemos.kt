@@ -101,7 +101,7 @@ fun DebouncedSearchDemo() {
             color = Color.Gray,
             modifier = Modifier.padding(vertical = 8.dp),
         )
-        LazyColumn {
+        LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
             items(results) { Text(it, modifier = Modifier.padding(vertical = 4.dp)) }
         }
     }
